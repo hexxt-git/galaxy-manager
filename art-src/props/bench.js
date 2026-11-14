@@ -1,7 +1,7 @@
 // A gentle arc of the cafeteria table benches: floor-plane circles squash vertically by FORE.
 const BENCH = {
   lit: '#4a92c9', dark: '#2b5c91',
-  R: 150, seat: 28, span: 0.46, lip: 9, fore: 0.72, r: 5.5,
+  R: 116, seat: 24, span: 0.46, lip: 15, fore: 0.72, r: 5.5,
 };
 
 function benchArc(R, cy, t0, t1, n) {
@@ -28,4 +28,4 @@ function bench() {
   path(sil, true); stroke(LINE);
 }
 
-registerProp('bench', { w: 140, h: 50, ox: 70, oy: 44, draw: bench, pal: () => [INK, BENCH.lit, BENCH.dark, GROUND] });
+registerProp('bench', { w: 114, h: 55, ox: 57, oy: 44, draw: bench, pal: () => [INK, BENCH.lit, BENCH.dark, GROUND] });

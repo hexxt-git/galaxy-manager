@@ -43,6 +43,6 @@ function medScanner() {
 }
 
 registerProp('med_scanner', {
-  w: 74, h: 85, ox: 36, oy: 77, draw: medScanner,
+  w: 96, h: 111, ox: 46, oy: 102, scale: [1.35, 1.35], draw: medScanner,
   pal: () => [INK, MEDSCAN.lit, MEDSCAN.dark, MEDSCAN.pad, MEDSCAN.padDark, MEDSCAN.arch, MEDSCAN.archDark, GROUND],
 });

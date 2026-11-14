@@ -59,6 +59,6 @@ function plant() {
 }
 
 registerProp('plant', {
-  w: 66, h: 77, ox: 33, oy: 69, draw: plant,
+  w: 48, h: 57, ox: 24, oy: 49, scale: [0.7, 0.7], draw: plant,
   pal: () => [INK, PLANT.leaf, PLANT.leafDark, PLANT.pot, PLANT.potDark, GROUND],
 });

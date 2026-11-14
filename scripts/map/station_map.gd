@@ -18,6 +18,7 @@ const KIND_END := ["wall_corner", "wall_corner_a", "wall_corner_b", ""]
 const WALL_DEPTH := 16      # side wall overlap past the floor line, for collision
 const WALL_TUCK := 32       # how far past a horizontal wall's top edge you can walk, half hidden behind it
 const DOOR_GAP := Vector2(34, 94)  # opening inside wall_door, x range
+const SIDE_DOOR := 48       # floor visible through a side door, between the cap's floor line and the next strip's top
 
 const PROP_DIR := "res://assets/art/props/"
 const FLOOR_DIR := "res://assets/art/"
@@ -29,25 +30,51 @@ const DECALS := {
 	"floors/control": ["control_cable_cover", "control_scorch", "control_grate"],
 }
 const DECAL_SNAP := {"storage_hatch": 56, "storage_hazard": 56}
-const DECAL_AREA := 14000.0  # art px² of floor per decal
+const DECAL_AREA := {"floor_tile": 45000.0, "floors/storage": 14000.0, "floors/control": 14000.0}  # art px² of floor per decal
 const WORKSTATION := preload("res://scenes/workstation.tscn")
+const ROOM_LIGHT := preload("res://assets/shaders/room_light.gdshader")
+const FLOOR_AO := preload("res://assets/shaders/floor_ao.gdshader")
+# Corner darkening on floors. Each point of light below 1 adds the *_DIM amounts, so dim rooms get deeper corners.
+const AO_RADIUS := 35.0   # art px out of the corner
+const AO_REACH := 133.0   # art px along the walls
+const AO_STRENGTH := 0.18
+const AO_DIM_RADIUS := 52.5
+const AO_DIM_REACH := 245.0
+const AO_DIM_STRENGTH := 0.9
+const AO_Z := -7  # over floors, decals and the vent; under the sight overlay (-6) and everything standing
 
 # origin and floor footprint in art px; footprint Rect2 is relative to the origin, or a Vector2 for ellipse radii
 const PROPS := {
-	"crate": {"origin": Vector2(31, 58), "foot": Rect2(-27, -22, 54, 22)},
-	"plant": {"origin": Vector2(33, 69), "foot": Rect2(-12, -12, 24, 12)},
-	"canister": {"origin": Vector2(24, 66), "foot": Rect2(-18, -20, 36, 20)},
+	"crate": {"origin": Vector2(33, 58), "foot": Rect2(-27, -22, 54, 22)},
+	"plant": {"origin": Vector2(24, 49), "foot": Rect2(-8, -8, 17, 8)},
+	"canister": {"origin": Vector2(20, 51), "foot": Rect2(-14, -15, 28, 15)},
 	"locker": {"origin": Vector2(30, 86), "foot": Rect2(-25, -14, 50, 14)},
-	"vent": {"origin": Vector2(33, 36), "foot": null},
-	"table_set": {"origin": Vector2(158, 124), "foot": Vector2(152, 110)},
+	"vent": {"origin": Vector2(29, 31), "foot": null},
+	"table_set": {"origin": Vector2(122, 104), "foot": Vector2(118, 86)},
+	"electrical_panel": {"origin": Vector2(90, 87), "foot": Rect2(-84, -16, 168, 16)},
+	"shelf": {"origin": Vector2(33, 83), "foot": Rect2(-27, -13, 55, 13)},
+	"generator": {"origin": Vector2(40, 65), "foot": Rect2(-34, -23, 68, 23)},
+	"reactor_core": {"origin": Vector2(46, 128), "foot": Rect2(-40, -41, 80, 41)},
+	"pipe_junction": {"origin": Vector2(51, 88), "foot": Rect2(-45, -19, 87, 20)},
+	"dish_antenna": {"origin": Vector2(35, 94), "foot": Rect2(-28, -23, 55, 23)},
+	"med_scanner": {"origin": Vector2(46, 102), "foot": Rect2(-38, -41, 76, 38), "walkable": true},
+	"specimen_tank": {"origin": Vector2(27, 73), "foot": Rect2(-21, -24, 42, 24)},
+	"stretcher": {"origin": Vector2(53, 73), "foot": Rect2(-47, -32, 94, 32)},
+	"swivel_chair": {"origin": Vector2(21, 66), "foot": Rect2(-14, -17, 28, 17)},
+	"cargo_cart": {"origin": Vector2(36, 70), "foot": Rect2(-30, -26, 60, 26)},
+	"hydro_planter": {"origin": Vector2(50, 48), "foot": Rect2(-46, -14, 91, 16)},
 }
 
 # x: inner left, segs: width in wall segments, back/front: floor lines.
 # back_wall false when the room shares the wall of the room above it.
+# side_doors: [side ("left"/"right"), floor line of the end cap above the opening]; cuts through merged walls.
+# light (optional, default 1): brightness of the floor, props and characters inside the room.
+# contrast (optional, default 1): colour exponent for the floor, props and workstations; above 1 is darker and richer.
+# shadow (optional, default 0.22, as exported): opacity of the ground shadows under props and characters.
 const ROOMS := [
 	{"name": "Cafeteria", "x": 0, "segs": 16, "back": 0, "front": 720, "back_wall": true, "doors": [2, 11], "floor": "floor_tile"},
-	{"name": "Storage", "x": 0, "segs": 7, "back": 720, "front": 1200, "back_wall": false, "doors": [], "floor": "floors/storage"},
-	{"name": "Control", "x": 512, "segs": 8, "back": 720, "front": 1200, "back_wall": false, "doors": [], "floor": "floors/control"},
+	{"name": "Storage", "x": 0, "segs": 7, "back": 720, "front": 1200, "back_wall": false, "doors": [], "side_doors": [["right", 910]], "floor": "floors/storage"},
+	{"name": "Control", "x": 512, "segs": 8, "back": 720, "front": 1200, "back_wall": false, "doors": [], "floor": "floors/control", "light": 0.9, "contrast": 2.0, "shadow": 0.7},
 ]
 
 # Lockers sit on the wall line behind them (y = wall + footprint depth), so nothing fits behind.
@@ -71,6 +98,21 @@ const LAYOUT := [
 	["vent", Vector2(640, 1010)],
 	["plant", Vector2(560, 1070)],
 	["canister", Vector2(984, 1070)],
+	["hydro_planter", Vector2(200, 32)],
+	["hydro_planter", Vector2(824, 32)],
+	["stretcher", Vector2(512, 180)],
+	["swivel_chair", Vector2(512, 560)],
+	["dish_antenna", Vector2(900, 580)],
+	["shelf", Vector2(290, 733)],
+	["shelf", Vector2(345, 733)],
+	["cargo_cart", Vector2(150, 950)],
+	["generator", Vector2(60, 880)],
+	["specimen_tank", Vector2(400, 1080)],
+	["electrical_panel", Vector2(610, 736)],
+	["generator", Vector2(580, 880)],
+	["med_scanner", Vector2(700, 900)],
+	["reactor_core", Vector2(930, 1000)],
+	["pipe_junction", Vector2(800, 1080)],
 ]
 
 const STATIONS := [
@@ -78,14 +120,18 @@ const STATIONS := [
 	["Life Support", Vector2(970, 790)],
 ]
 
+var floor_rects: Array[Rect2] = []  # every floor region drawn, in world px
+
 var _textures := {}
-var _strips := []  # side walls: [x0, x1, top floor line, bottom floor line]
+var _room_mats := {}  # room name -> ShaderMaterial, for rooms with their own lighting
+var _strips := []  # side walls: [x0, x1, top floor line, bottom floor line, side door ys, {side: floor of the room there}]
 var _walls := {}   # floor line -> [[x0, x1, doors], ...]
 var _h_sight := []  # horizontal wall pieces that block sight: [x0, x1, floor line]
-var _v_sight := []  # side walls: [x0, x1, top floor line, bottom floor line]
+var _v_sight := []  # side wall pieces: [x0, x1, top floor line, bottom floor line, top is a door jamb, bottom is one]
 
 
 func _ready() -> void:
+	add_to_group("station_map")
 	y_sort_enabled = true
 	for room in ROOMS:
 		_build_room(room)
@@ -97,6 +143,34 @@ func _ready() -> void:
 		ws.title = entry[0]
 		ws.position = entry[1] * SCALE
 		add_child(ws)
+		# after add_child: the Interactable gives the sprite its own copy of the material in _ready
+		var room := room_at(entry[1] * SCALE)
+		var mat: ShaderMaterial = ws.get_node("Sprite").material
+		mat.set_shader_parameter("light", room.get("light", 1.0))
+		mat.set_shader_parameter("contrast", room.get("contrast", 1.0))
+
+
+## The room containing a world px position, or {} outside every room.
+func room_at(world: Vector2) -> Dictionary:
+	var p := world / SCALE
+	for room in ROOMS:
+		if Rect2(room.x, room.back, room.segs * SEG, room.front - room.back).has_point(p):
+			return room
+	return {}
+
+
+func _light(item: CanvasItem, room: Dictionary) -> void:
+	if not (room.has("light") or room.has("contrast") or room.has("shadow")):
+		return
+	if room.name not in _room_mats:
+		var mat := ShaderMaterial.new()
+		mat.shader = ROOM_LIGHT
+		mat.set_shader_parameter("light", room.get("light", 1.0))
+		mat.set_shader_parameter("contrast", room.get("contrast", 1.0))
+		if room.has("shadow"):
+			mat.set_shader_parameter("shadow", room.shadow)
+		_room_mats[room.name] = mat
+	item.material = _room_mats[room.name]
 
 
 func _tex(name: String) -> Texture2D:
@@ -132,26 +206,56 @@ func _build_room(room: Dictionary) -> void:
 	var back: float = room.back
 	var front: float = room.front
 
-	# Floor: a world-aligned region of the repeating tile, so neighbouring rooms line up.
 	var floor_top := back - WALL_ORIGIN_Y if room.back_wall else back
-	var fl := Sprite2D.new()
-	fl.texture = load(FLOOR_DIR + room.floor + ".png")
-	fl.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	fl.region_enabled = true
-	fl.region_rect = Rect2(x0, floor_top, x1 - x0, front - floor_top)
-	fl.centered = false
-	fl.scale = Vector2(SCALE, SCALE)
-	fl.position = Vector2(x0, floor_top) * SCALE
-	fl.z_index = -10
-	fl.z_as_relative = false
-	add_child(fl)
+	_floor(room, Rect2(x0, floor_top, x1 - x0, front - floor_top))
 	_scatter_decals(room, Rect2(x0, back, x1 - x0, front - WALL_ORIGIN_Y - back))
+	_floor_ao(room, Rect2(x0, back, x1 - x0, front - WALL_ORIGIN_Y - back))
 
-	_strips.append([x0 - CORNER_W, x0, back, front])
-	_strips.append([x1, x1 + CORNER_W, back, front])
+	var side := {"left": [], "right": []}
+	for d in room.get("side_doors", []):
+		side[d[0]].append(d[1])
+	_strips.append([x0 - CORNER_W, x0, back, front, side.left, {"right": room}])
+	_strips.append([x1, x1 + CORNER_W, back, front, side.right, {"left": room}])
 	if room.back_wall:
 		_add_wall(back, [x0, x1, []])
 	_add_wall(front, [x0, x1, room.doors])
+
+
+# A world-aligned region of the repeating floor tile, so neighbouring floors line up.
+func _floor(room: Dictionary, rect: Rect2) -> void:
+	var fl := Sprite2D.new()
+	fl.texture = load(FLOOR_DIR + room.floor + ".png")
+	_light(fl, room)
+	fl.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	fl.region_enabled = true
+	fl.region_rect = rect
+	floor_rects.append(Rect2(rect.position * SCALE, rect.size * SCALE))
+	fl.centered = false
+	fl.scale = Vector2(SCALE, SCALE)
+	fl.position = rect.position * SCALE
+	fl.z_index = -10
+	fl.z_as_relative = false
+	add_child(fl)
+
+
+# rect: the floor left visible between the room's walls, in art px.
+func _floor_ao(room: Dictionary, rect: Rect2) -> void:
+	var dark: float = 1.0 - room.get("light", 1.0)
+	var mat := ShaderMaterial.new()
+	mat.shader = FLOOR_AO
+	mat.set_shader_parameter("rect_pos", rect.position * SCALE)
+	mat.set_shader_parameter("rect_size", rect.size * SCALE)
+	mat.set_shader_parameter("radius", (AO_RADIUS + dark * AO_DIM_RADIUS) * SCALE)
+	mat.set_shader_parameter("reach", (AO_REACH + dark * AO_DIM_REACH) * SCALE)
+	mat.set_shader_parameter("strength", AO_STRENGTH + dark * AO_DIM_STRENGTH)
+	var ao := ColorRect.new()
+	ao.material = mat
+	ao.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ao.position = rect.position * SCALE
+	ao.size = rect.size * SCALE
+	ao.z_index = AO_Z
+	ao.z_as_relative = false
+	add_child(ao)
 
 
 func _add_wall(y: float, wall: Array) -> void:
@@ -168,25 +272,55 @@ func _build_walls() -> void:
 		for m in strips:
 			if m[2] == s[2] and m[3] == s[3] and s[0] - m[1] <= MERGE_GAP:
 				m[1] = maxf(m[1], s[1])
+				m[4] = m[4] + s[4]
+				m[5] = m[5].merged(s[5])
 				joined = true
 		if not joined:
 			strips.append(s.duplicate())
 
-	# Side walls are flat lit tops drawn under everything; their ends hide under the wall bands.
+	# Side doors split a strip into pieces: the one above ends in a wall face (a band of column kind 1),
+	# the one below starts again SIDE_DOOR of floor further down (kind 2), like a room's back corners.
+	var pieces := []
+	var door_lines := []
 	for s in strips:
+		var doors: Array = s[4]
+		doors.sort()
 		var top: float = s[2]
-		var h: float = s[3] - WALL_FACE - top
-		for part in [["wall_v", s[0], s[1] - s[0]], ["wall_ink", s[0] - 2, 4], ["wall_ink", s[1] - 2, 4]]:
+		var after_door := false
+		for y0 in doors:
+			var y1: float = y0 + SIDE_DOOR + WALL_ORIGIN_Y
+			pieces.append([s[0], s[1], top, y0, after_door, true])
+			# each room's floor runs to the middle of the doorway, or all the way when nothing is on the other side
+			var mid: float = (s[0] + s[1]) / 2.0
+			var floors: Dictionary = s[5]
+			var left: Dictionary = floors.get("left", floors.get("right"))
+			var right: Dictionary = floors.get("right", left)
+			_floor(left, Rect2(s[0], y0 - WALL_ORIGIN_Y, mid - s[0], y1 - y0 + WALL_ORIGIN_Y))
+			_floor(right, Rect2(mid, y0 - WALL_ORIGIN_Y, s[1] - mid, y1 - y0 + WALL_ORIGIN_Y))
+			door_lines.append_array([y0, y1])
+			top = y1
+			after_door = true
+		pieces.append([s[0], s[1], top, s[3], after_door, false])
+
+	# Side walls are flat lit tops drawn under everything; their ends hide under the wall bands.
+	for p in pieces:
+		var top: float = p[2]
+		var h: float = p[3] - WALL_FACE - top
+		for part in [["wall_v", p[0], p[1] - p[0]], ["wall_ink", p[0] - 2, 4], ["wall_ink", p[1] - 2, 4]]:
 			var spr := _tiled(part[0], Rect2(part[1], top, part[2], h), top)
 			spr.z_index = -5
 			spr.z_as_relative = false
-		_solid(Rect2(s[0], top - WALL_DEPTH, s[1] - s[0], s[3] - top + WALL_DEPTH))
-		_v_sight.append(s)
+		var solid_top := top - (WALL_ORIGIN_Y - WALL_TUCK if p[4] else WALL_DEPTH)
+		_solid(Rect2(p[0], solid_top, p[1] - p[0], p[3] - solid_top))
+		_v_sight.append(p)
 
 	for y in _walls:
 		for w in _walls[y]:
 			_build_wall(w[0], w[1], y, w[2])
-		_build_joins(y, _walls[y], strips)
+		_build_joins(y, _walls[y], pieces)
+	for y in door_lines:
+		if y not in _walls:
+			_build_joins(y, [], pieces)
 
 
 # Horizontal walls are solid over their drawn height, less WALL_TUCK, so you can only half hide behind a front face.
@@ -222,10 +356,18 @@ func sight_segments(eye: Vector2, chooser: Vector2) -> Array:
 	for h in _h_sight:
 		var y: float = edge.call(h[2])
 		out.append([Vector2(h[0], y) * SCALE, Vector2(h[1], y) * SCALE])
-	# side walls run between the horizontal walls' blocking lines; reaching past them would cut into a visible wall face
+	# side walls run between the horizontal walls' blocking lines; reaching past them would cut into a visible wall face.
+	# At a side door the piece above always stops at its cap's floor line, since the cap is opaque from both sides,
+	# and both jambs also block across the strip, for eyes standing in the doorway.
 	for v in _v_sight:
 		var x: float = v[1] if c.x < (v[0] + v[1]) / 2.0 else v[0]
-		out.append([Vector2(x, edge.call(v[2])) * SCALE, Vector2(x, edge.call(v[3])) * SCALE])
+		var a: float = edge.call(v[2])
+		var b: float = v[3] if v[5] else edge.call(v[3])
+		out.append([Vector2(x, a) * SCALE, Vector2(x, b) * SCALE])
+		if v[4]:
+			out.append([Vector2(v[0], a) * SCALE, Vector2(v[1], a) * SCALE])
+		if v[5]:
+			out.append([Vector2(v[0], b) * SCALE, Vector2(v[1], b) * SCALE])
 	return out
 
 
@@ -236,7 +378,12 @@ func sight_key(eye: Vector2) -> Array:
 	for y in _walls:
 		key.append(e.y < y - WALL_ORIGIN_Y / 2.0)
 	for v in _v_sight:
-		key.append(e.x < (v[0] + v[1]) / 2.0)
+		# the side only matters while the eye is level with the wall; its span ends where the band keys flip
+		var lo: float = v[2] - WALL_ORIGIN_Y / 2.0
+		var hi: float = v[3] if v[5] else v[3] - WALL_ORIGIN_Y / 2.0
+		key.append(e.x < (v[0] + v[1]) / 2.0 if lo <= e.y and e.y < hi else true)
+		if v[4]:
+			key.append(e.y < v[2] - WALL_ORIGIN_Y / 2.0)
 	return key
 
 
@@ -280,7 +427,8 @@ func _build_joins(y: float, walls: Array, strips: Array) -> void:
 		if r[2] != 3:
 			a += END_W if runs[i - 1][2] == -1 else 0
 			b -= END_W if runs[i + 1][2] == -1 else 0
-		_tiled(KIND_FILL[r[2]], Rect2(a, top, b - a, WALL_ROWS), y)
+		if b > a:
+			_tiled(KIND_FILL[r[2]], Rect2(a, top, b - a, WALL_ROWS), y)
 	for i in runs.size() - 1:
 		var l: int = runs[i][2]
 		var r: int = runs[i + 1][2]
@@ -320,11 +468,18 @@ func _tiled(name: String, rect: Rect2, sort_y: float) -> Sprite2D:
 func _add_prop(name: String, pos: Vector2) -> void:
 	var spec: Dictionary = PROPS[name]
 	var s := _sprite(_tex(name), pos, spec.origin)
+	_light(s, room_at(pos * SCALE))
 	if spec.foot == null:
 		# flat on the floor: never covers anyone
 		s.z_index = -8
 		s.z_as_relative = false
+	elif spec.get("walkable", false):
+		# stood on, so it always draws under the player
+		s.z_index = -1
+		s.z_as_relative = false
 	add_child(s)
+	if spec.get("walkable", false):
+		return
 	if spec.foot is Rect2:
 		var foot: Rect2 = spec.foot
 		_solid(Rect2(pos + foot.position, foot.size))
@@ -349,7 +504,7 @@ func _scatter_decals(room: Dictionary, area: Rect2) -> void:
 		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(room.name)
-	for k in int(area.get_area() / DECAL_AREA):
+	for k in int(area.get_area() / DECAL_AREA[room.floor]):
 		var name: String = names[rng.randi() % names.size()]
 		var tex: Texture2D = load(DECAL_DIR + name + ".png")
 		var size := tex.get_size()
@@ -369,6 +524,7 @@ func _scatter_decals(room: Dictionary, area: Rect2) -> void:
 		d.centered = false
 		d.scale = Vector2(SCALE, SCALE)
 		d.position = pos * SCALE
+		_light(d, room)
 		d.z_index = -9
 		d.z_as_relative = false
 		add_child(d)

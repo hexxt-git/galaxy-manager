@@ -4,6 +4,15 @@ shader_type canvas_item;
 uniform vec4 body_color : source_color = vec4(0.773, 0.067, 0.067, 1.0);
 uniform vec4 shadow_color : source_color = vec4(0.478, 0.031, 0.220, 1.0);
 
+#include "res://assets/shaders/room_light.gdshaderinc"
+
+// COLOR is overwritten below, which would drop the node's modulate.
+varying vec4 modulate;
+
+void vertex() {
+	modulate = COLOR;
+}
+
 void fragment() {
 	vec4 c = texture(TEXTURE, UV);
 	if (c.g < 0.1) {
@@ -13,5 +22,5 @@ void fragment() {
 			c.rgb = shadow_color.rgb;
 		}
 	}
-	COLOR = c;
+	COLOR = vec4(room_light(c.rgb), c.a) * modulate;
 }

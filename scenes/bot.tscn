@@ -1,0 +1,30 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/bots/bot.gd" id="1_bot"]
+[ext_resource type="Texture2D" path="res://assets/art/character/character.png" id="2_character"]
+[ext_resource type="Shader" path="res://assets/art/character/character_recolor.gdshader" id="3_recolor"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_character"]
+resource_local_to_scene = true
+shader = ExtResource("3_recolor")
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_feet"]
+radius = 16.0
+height = 84.0
+
+[node name="Bot" type="CharacterBody2D"]
+collision_layer = 0
+motion_mode = 1
+script = ExtResource("1_bot")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_character")
+scale = Vector2(1.8, 1.8)
+texture = ExtResource("2_character")
+centered = false
+offset = Vector2(-34, -69)
+
+[node name="Feet" type="CollisionShape2D" parent="."]
+position = Vector2(0, -12)
+rotation = 1.5707964
+shape = SubResource("CapsuleShape2D_feet")

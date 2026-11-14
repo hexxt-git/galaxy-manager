@@ -23,13 +23,37 @@ function rounded(pts, r) {
 
 function rect(x0, y0, x1, y1) { return [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]; }
 
-// name -> { w, h, ox, oy, draw, pal: () => [colours] }. The origin is the art pixel boundary under (0, 0).
+// name -> { w, h, ox, oy, draw, pal: () => [colours], scale?: [sx, sy] }. The origin is the art pixel boundary under (0, 0).
+// `scale` sizes the geometry only: strokes go through the unscaled transform, so LINE and DETAIL stay put.
 const PROPS = {};
 function registerProp(name, spec) { PROPS[name] = spec; }
 
+let lineBase = null;
+function stroke(w, color = INK) {
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = w;
+  ctx.strokeStyle = color;
+  if (!lineBase) return ctx.stroke();
+  ctx.save();
+  ctx.setTransform(lineBase);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawProp(P) {
+  const [sx, sy] = P.scale || [1, 1];
+  lineBase = ctx.getTransform();
+  ctx.save();
+  ctx.scale(sx, sy);
+  P.draw();
+  ctx.restore();
+  lineBase = null;
+}
+
 function sprite(name) {
   const P = PROPS[name];
-  const cv = pixelate(P.w, P.h, P.pal(), g => { ctx = g; ctx.translate(P.ox, P.oy); P.draw(); });
+  const cv = pixelate(P.w, P.h, P.pal(), g => { ctx = g; ctx.translate(P.ox, P.oy); drawProp(P); });
   const g = cv.getContext('2d');
   const img = g.getImageData(0, 0, P.w, P.h);
   const key = hexRgb(GROUND);
@@ -84,7 +108,7 @@ function propPage(names) {
   let x = PAD;
   names.forEach((n, i) => {
     const P = PROPS[n];
-    out.save(); out.translate(x + P.ox * VS, 50 + P.oy * VS); out.scale(VS, VS); P.draw(); out.restore();
+    out.save(); out.translate(x + P.ox * VS, 50 + P.oy * VS); out.scale(VS, VS); drawProp(P); out.restore();
     x += vecW[i] + PAD;
   });
 

@@ -67,6 +67,6 @@ function dishAntenna() {
 }
 
 registerProp('dish_antenna', {
-  w: 59, h: 83, ox: 29, oy: 76, draw: dishAntenna,
+  w: 72, h: 102, ox: 35, oy: 94, scale: [1.25, 1.25], draw: dishAntenna,
   pal: () => [INK, DISH.shell, DISH.shellDark, DISH.leg, DISH.legDark, DISH.feed, GROUND],
 });

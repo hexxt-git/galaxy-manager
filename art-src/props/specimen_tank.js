@@ -61,6 +61,6 @@ function specimenTank() {
 }
 
 registerProp('specimen_tank', {
-  w: 52, h: 74, ox: 25, oy: 66, draw: specimenTank,
+  w: 57, h: 81, ox: 27, oy: 73, scale: [1.1, 1.12], draw: specimenTank,
   pal: () => [INK, SPECTANK.metal, SPECTANK.metalDark, SPECTANK.glass, SPECTANK.glassDark, SPECTANK.fluid, SPECTANK.fluidDark, SPECTANK.specimen, GROUND],
 });

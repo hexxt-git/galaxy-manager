@@ -3,8 +3,8 @@
 // Origin is the table's floor centre, so y-sort puts characters behind the rear benches and in front of the front ones.
 const TSET = {
   lit: '#4a92c9', dark: '#2b5c91', fore: 0.72,
-  table: { R: 118, height: 17, inset: 11 },
-  bench: { R: 150, seat: 28, span: 0.46, lip: 9, r: 5.5 },
+  table: { R: 88, height: 26, inset: 10 },
+  bench: { R: 116, seat: 24, span: 0.46, lip: 15, r: 5.5 },
   n: 6,
 };
 
@@ -60,4 +60,4 @@ function tableSet() {
   angles.filter(c => near(c) >= 0).forEach(tsBench);
 }
 
-registerProp('table_set', { w: 316, h: 242, ox: 158, oy: 124, draw: tableSet, pal: () => [INK, TSET.lit, TSET.dark, GROUND] });
+registerProp('table_set', { w: 246, h: 198, ox: 122, oy: 104, draw: tableSet, pal: () => [INK, TSET.lit, TSET.dark, GROUND] });

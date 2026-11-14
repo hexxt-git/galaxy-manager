@@ -77,6 +77,6 @@ function pipeJunction() {
 }
 
 registerProp('pipe_junction', {
-  w: 79, h: 80, ox: 41, oy: 72, draw: pipeJunction,
+  w: 98, h: 97, ox: 51, oy: 88, scale: [1.3, 1.25], draw: pipeJunction,
   pal: () => [INK, PIPES.lit, PIPES.dark, PIPES.flange, PIPES.flangeDark, PIPES.wheel, PIPES.wheelDark, GROUND],
 });

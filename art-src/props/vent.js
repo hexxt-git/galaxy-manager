@@ -34,4 +34,4 @@ function vent() {
   path(sil, true); stroke(LINE);
 }
 
-registerProp('vent', { w: 66, h: 42, ox: 33, oy: 36, draw: vent, pal: () => [INK, VENT.lit, VENT.dark] });
+registerProp('vent', { w: 58, h: 37, ox: 29, oy: 31, scale: [0.85, 0.85], draw: vent, pal: () => [INK, VENT.lit, VENT.dark] });

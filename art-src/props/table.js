@@ -1,7 +1,7 @@
-// Round cafeteria table: a short drum. R is the floor radius, so a ring of BENCH arcs (R 150, seat 28) fits around it.
+// Round cafeteria table: a short drum. R is the floor radius, so a ring of BENCH arcs (R 116, seat 24) fits around it.
 const TABLE = {
   lit: '#4a92c9', dark: '#2b5c91',
-  R: 118, height: 17, inset: 11, fore: 0.72,
+  R: 88, height: 26, inset: 10, fore: 0.72,
 };
 
 // Floor-plane ellipse around the table centre, lifted by `up`, from angle t0 to t1 (0 = nearest the camera).
@@ -27,4 +27,4 @@ function table() {
   path(sil, true); stroke(LINE);
 }
 
-registerProp('table', { w: 244, h: 197, ox: 122, oy: 191, draw: table, pal: () => [INK, TABLE.lit, TABLE.dark, GROUND] });
+registerProp('table', { w: 190, h: 170, ox: 94, oy: 159, draw: table, pal: () => [INK, TABLE.lit, TABLE.dark, GROUND] });

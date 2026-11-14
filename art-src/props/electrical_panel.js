@@ -81,6 +81,6 @@ function electricalPanel() {
 }
 
 registerProp('electrical_panel', {
-  w: 173, h: 96, ox: 86, oy: 78, draw: electricalPanel,
+  w: 181, h: 106, ox: 90, oy: 87, scale: [1.05, 1.12], draw: electricalPanel,
   pal: () => [INK, EPANEL.lit, EPANEL.dark, EPANEL.grille, EPANEL.warn, EPANEL.cable, GROUND],
 });

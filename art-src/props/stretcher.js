@@ -2,8 +2,8 @@
 const STRETCHER = {
   sheet: '#dfe7e4', sheetDark: '#a3b4b6', metal: '#8a909c', metalDark: '#555a68',
   blanket: '#6390bd', blanketDark: '#3c6390',
-  half: 37, depth: 22, mattress: 7, frame: 3, legs: 12, r: 5, wheel: 3,
-  blanketX: 6,
+  half: 47, depth: 32, mattress: 8, frame: 3, legs: 18, r: 5, wheel: 3,
+  blanketX: 8, pillow: 22,
 };
 
 function stretcherEdges(pts, r) {
@@ -24,16 +24,17 @@ function stretcher() {
     pen([[x, yu], [x, -S.wheel - 1]], LINE + 2.4, INK, 0);
     pen([[x, yu], [x, -S.wheel - 1]], 2.4, S.metal, 0);
   }
-  pen([[-a + 6, -9], [a - 6, -9]], LINE + 2, INK, 0);
-  pen([[-a + 6, -9], [a - 6, -9]], 2, S.metalDark, 0);
+  const yb = -S.wheel - 6;
+  pen([[-a + 6, yb], [a - 6, yb]], LINE + 2, INK, 0);
+  pen([[-a + 6, yb], [a - 6, yb]], 2, S.metalDark, 0);
   for (const x of [-a + 6, a - 6]) {
     const wh = shape(smooth([[x - S.wheel, -S.wheel], [x, -2 * S.wheel], [x + S.wheel, -S.wheel], [x, 0]], true, 3), S.metalDark, 0, AMP);
     path(wh, true); stroke(DETAIL);
   }
 
   // head rail hoops behind the pillow
-  const rx = -a + 3, hoop = smooth([[rx, yf + 1], [rx - 3, yf - 16], [rx + 1, yt - 12], [rx + 3, yt + 3]], false, 3);
-  pen(hoop, LINE + 2.2, INK, AMP);
+  const rx = -a + 3, hoop = smooth([[rx, yf + 1], [rx - 2, yf - 14], [rx + 1, yt - 10], [rx + 3, yt + 3]], false, 3);
+  pen(hoop, LINE + 2.2, INK, 0);
   pen(hoop, 2.2, S.metal, 0);
 
   const sil = shape(rounded(stretcherEdges(rect(-a, yt, a, yu), S.r), S.r), S.sheet, 0, AMP);
@@ -56,7 +57,7 @@ function stretcher() {
   path(sil, true); stroke(LINE);
 
   // pillow: a puffy cushion with a rounded near face
-  const px0 = -a + 4, px1 = -a + 20, py0 = yt + 3, py1 = yf - 1, ph = 4;
+  const px0 = -a + 5, px1 = -a + 5 + S.pillow, py0 = yt + 3, py1 = yf - 1, ph = 4;
   const pil = shape(smooth([[px0 + 2, py0 - ph], [px1 - 2, py0 - ph - 1], [px1 + 1, (py0 + py1) / 2 - ph], [px1 - 1, py1],
     [(px0 + px1) / 2, py1 + 1.5], [px0 + 1, py1], [px0 - 1, (py0 + py1) / 2 - ph]], true, 3), S.sheet, 0, AMP);
   clipTo(pil, () => {
@@ -66,6 +67,6 @@ function stretcher() {
 }
 
 registerProp('stretcher', {
-  w: 87, h: 68, ox: 43, oy: 59, draw: stretcher,
+  w: 107, h: 82, ox: 53, oy: 73, draw: stretcher,
   pal: () => [INK, STRETCHER.sheet, STRETCHER.sheetDark, STRETCHER.metal, STRETCHER.metalDark, STRETCHER.blanket, STRETCHER.blanketDark, GROUND],
 });

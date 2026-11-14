@@ -59,6 +59,6 @@ function reactorCore() {
 }
 
 registerProp('reactor_core', {
-  w: 65, h: 95, ox: 31, oy: 87, draw: reactorCore,
+  w: 98, h: 137, ox: 46, oy: 128, scale: [1.6, 1.5], draw: reactorCore,
   pal: () => [INK, ...new Set([REACTOR.metal, REACTOR.metalDark, REACTOR.collar, REACTOR.collarDark, REACTOR.base, REACTOR.baseDark]), REACTOR.core, REACTOR.coreDark, GROUND],
 });

@@ -17,4 +17,4 @@ function crate() {
   path(sil, true); stroke(LINE);
 }
 
-registerProp('crate', { w: 62, h: 64, ox: 31, oy: 58, draw: crate, pal: () => [INK, CRATE.lit, CRATE.dark, GROUND] });
+registerProp('crate', { w: 67, h: 67, ox: 33, oy: 58, draw: crate, pal: () => [INK, CRATE.lit, CRATE.dark, GROUND] });

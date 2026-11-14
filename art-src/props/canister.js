@@ -40,6 +40,6 @@ function canister() {
 }
 
 registerProp('canister', {
-  w: 51, h: 75, ox: 24, oy: 66, draw: canister,
+  w: 42, h: 59, ox: 20, oy: 51, scale: [0.78, 0.75], draw: canister,
   pal: () => [INK, CANISTER.lit, CANISTER.dark, CANISTER.cap, CANISTER.capDark, CANISTER.label, CANISTER.labelDark, GROUND],
 });

@@ -17,8 +17,8 @@ def const(name):
     return float(re.search(r'const %s := (\d+)' % name, src).group(1))
 
 ROOMS, LAYOUT, STATIONS = table('ROOMS'), table('LAYOUT'), table('STATIONS')
-SEG, WO, ROWS, FACE, CW, END_W, GAP = (const(n) for n in
-    ('SEG', 'WALL_ORIGIN_Y', 'WALL_ROWS', 'WALL_FACE', 'CORNER_W', 'END_W', 'MERGE_GAP'))
+SEG, WO, ROWS, FACE, CW, END_W, GAP, SIDE_DOOR = (const(n) for n in
+    ('SEG', 'WALL_ORIGIN_Y', 'WALL_ROWS', 'WALL_FACE', 'CORNER_W', 'END_W', 'MERGE_GAP', 'SIDE_DOOR'))
 KIND_FILL = ['', 'wall_fill_a', 'wall_fill_b', 'wall_v']
 KIND_END = ['wall_corner', 'wall_corner_a', 'wall_corner_b', '']
 ORIG = {m.group(1): (float(m.group(2)), float(m.group(3))) for m in
@@ -37,15 +37,20 @@ def put(im, x, y):
 
 layers = []  # (z, sort_y, image, x, y)
 strips, walls = [], {}
-for r in ROOMS:
-    x0, x1 = r['x'], r['x'] + r['segs'] * SEG
-    top = r['back'] - WO if r['back_wall'] else r['back']
-    fl = T('/' + r['floor']); tile = Image.new('RGBA', (int(x1 - x0), int(r['front'] - top)))
+def floor(name, x0, top, w, h):
+    fl = T('/' + name); tile = Image.new('RGBA', (int(w), int(h)))
     for ty in range(-fl.height, tile.height + fl.height, fl.height):
         for tx in range(-fl.width, tile.width + fl.width, fl.width):
             tile.alpha_composite(fl, (int(tx - (x0 % fl.width)), int(ty - (top % fl.height))))
     layers.append((-10, 0, tile, x0, top))
-    strips += [[x0 - CW, x0, r['back'], r['front']], [x1, x1 + CW, r['back'], r['front']]]
+for r in ROOMS:
+    x0, x1 = r['x'], r['x'] + r['segs'] * SEG
+    top = r['back'] - WO if r['back_wall'] else r['back']
+    floor(r['floor'], x0, top, x1 - x0, r['front'] - top)
+    side = {'left': [], 'right': []}
+    for d in r.get('side_doors', []): side[d[0]].append(d[1])
+    strips += [[x0 - CW, x0, r['back'], r['front'], side['left'], {'right': r['floor']}],
+               [x1, x1 + CW, r['back'], r['front'], side['right'], {'left': r['floor']}]]
     if r['back_wall']: walls.setdefault(r['back'], []).append((x0, x1, []))
     walls.setdefault(r['front'], []).append((x0, x1, r['doors']))
 
@@ -57,9 +62,19 @@ def tiled(n, x, y, w, h):
 
 merged = []
 for s in sorted(strips, key=lambda s: s[0]):
-    m = next((m for m in merged if m[2:] == s[2:] and s[0] - m[1] <= GAP), None)
-    if m: m[1] = max(m[1], s[1])
+    m = next((m for m in merged if m[2:4] == s[2:4] and s[0] - m[1] <= GAP), None)
+    if m: m[1] = max(m[1], s[1]); m[4] = m[4] + s[4]; m[5] = {**m[5], **s[5]}
     else: merged.append(list(s))
+pieces, door_lines = [], []
+for x0, x1, top, bot, doors, fls in merged:
+    for y0 in sorted(doors):
+        y1 = y0 + SIDE_DOOR + WO; mid = (x0 + x1) / 2
+        left = fls.get('left', fls.get('right')); right = fls.get('right', left)
+        pieces.append([x0, x1, top, y0])
+        floor(left, x0, y0 - WO, mid - x0, y1 - y0 + WO); floor(right, mid, y0 - WO, x1 - mid, y1 - y0 + WO)
+        door_lines += [y0, y1]; top = y1
+    pieces.append([x0, x1, top, bot])
+merged = pieces
 for x0, x1, top, bot in merged:
     h = bot - FACE - top
     for n, x, w in (('wall_v', x0, x1 - x0), ('wall_ink', x0 - 2, 4), ('wall_ink', x1 - 2, 4)):
@@ -70,6 +85,9 @@ for y, ws in walls.items():
         while i < segs:
             n = 'wall_door' if i in doors else 'wall_h'
             layers.append((0, y, T(n), x0 + i * SEG, y - WO)); i += 2 if n == 'wall_door' else 1
+for y in door_lines:
+    if y not in walls: walls[y] = []
+for y, ws in walls.items():
     spans = [(a, b, 0) for a, b, _ in ws]
     spans += [(s[0], s[1], 1) for s in merged if s[3] == y] + [(s[0], s[1], 2) for s in merged if s[2] == y]
     cuts = sorted({x for sp in spans for x in sp[:2]})
@@ -88,6 +106,7 @@ for y, ws in walls.items():
         if k != 3:
             a += END_W if runs[i - 1][2] == -1 else 0
             b -= END_W if runs[i + 1][2] == -1 else 0
+        if b <= a: continue
         layers.append((0, y, tiled(KIND_FILL[k], a, top, b - a, ROWS), a, top))
     for (_, e, l), (_, _, r) in zip(runs, runs[1:]):
         if l == -1 or r == -1:
@@ -107,7 +126,7 @@ for _, (x, y) in STATIONS:
     layers.append((0, y, T('workstation'), x - 43, y - 74))
 ch = Image.open(ART / 'character/character.png').convert('RGBA')
 px, py = [float(v) / 2 for v in re.search(r'position = Vector2\(([\d.]+), ([\d.]+)\)\nmotion_mode', (ROOT / 'scenes/main.tscn').read_text()).groups()]
-layers.append((0, py, ch, px - 38, py - 77))
+layers.append((0, py, ch, px - 34, py - 69))
 for z, sy, im, x, y in sorted(layers, key=lambda l: (l[0], l[1])):
     put(im, x, y)
 zoom = int(sys.argv[2]) if len(sys.argv) > 2 else 1

@@ -49,6 +49,6 @@ function shelf() {
 }
 
 registerProp('shelf', {
-  w: 65, h: 89, ox: 32, oy: 80, draw: shelf,
+  w: 67, h: 92, ox: 33, oy: 83, scale: [1.05, 1.05], draw: shelf,
   pal: () => [INK, SHELF.lit, SHELF.dark, ...new Set(SHELF.bins.flatMap(b => b.slice(5))), GROUND],
 });

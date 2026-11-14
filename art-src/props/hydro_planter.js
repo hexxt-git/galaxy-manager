@@ -78,6 +78,6 @@ function hydroPlanter() {
 }
 
 registerProp('hydro_planter', {
-  w: 83, h: 66, ox: 40, oy: 58, draw: hydroPlanter,
+  w: 104, h: 55, ox: 50, oy: 48, scale: [1.3, 0.8], draw: hydroPlanter,
   pal: () => [INK, HYDRO.lit, HYDRO.dark, HYDRO.water, HYDRO.leaf, HYDRO.leafDark, HYDRO.leg, GROUND],
 });

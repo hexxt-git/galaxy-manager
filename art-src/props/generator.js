@@ -49,6 +49,6 @@ function generator() {
 }
 
 registerProp('generator', {
-  w: 62, h: 69, ox: 31, oy: 63, draw: generator,
+  w: 82, h: 74, ox: 40, oy: 65, scale: [1.3, 1.05], draw: generator,
   pal: () => [INK, GENERATOR.lit, GENERATOR.dark, GENERATOR.grille, GENERATOR.slat, GENERATOR.pipe, GENERATOR.pipeDark, GENERATOR.light, GROUND],
 });

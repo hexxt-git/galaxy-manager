@@ -8,7 +8,9 @@
 // One horizontal strip per colour: idle, walk1..walk4, all facing right, feet at the same origin.
 // DENSITY scales the art-pixel resolution; 1 matches the sprite sheet.
 const DENSITY = 0.75;
-const SW = Math.ceil(100 * DENSITY), SH = Math.ceil(106 * DENSITY), OX = 50.2 * DENSITY, OY = 102.75 * DENSITY;
+// SIZE shrinks the figure relative to the props while keeping their outline width.
+const SIZE = 0.9;
+const SW = Math.ceil(100 * DENSITY * SIZE), SH = Math.ceil(106 * DENSITY * SIZE), OX = 50.2 * DENSITY * SIZE, OY = 102.75 * DENSITY * SIZE;
 const FR = ['idle'];
 const lines = [];
 // Body is keyed pure red (lit) and pure blue (shadow); the game recolours those two at runtime.
@@ -19,7 +21,7 @@ PAL.key = ['#ff0000', '#0000ff'];
   cv.height = SH;
   const g = cv.getContext('2d');
   FR.forEach((fr, i) => {
-    const s = pixelate(SW, SH, [INK, '#ff0000', '#0000ff', '#95cadc', '#4f7d93', '#ffffff'], h => { ctx = h; character(OX, OY, 'key', 0.93 * DENSITY, false, fr); });
+    const s = pixelate(SW, SH, [INK, '#ff0000', '#0000ff', '#95cadc', '#4f7d93', '#ffffff'], h => { ctx = h; character(OX, OY, 'key', 0.93 * DENSITY * SIZE, false, fr, 1 / SIZE); });
     g.drawImage(s, i * SW, 0);
   });
   lines.push('character ' + cv.toDataURL('image/png'));

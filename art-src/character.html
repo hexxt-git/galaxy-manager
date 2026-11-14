@@ -470,10 +470,11 @@ const WALK = ['walk1', 'walk2', 'walk3', 'walk4'];
 const OUTLINE = 5;
 const AMP = 0.3;
 
-function character(cx, by, colour, s = 1, flip = false, frame = 'idle') {
+// lineScale multiplies stroke widths, so the figure can shrink without thinning its outline
+function character(cx, by, colour, s = 1, flip = false, frame = 'idle', lineScale = 1) {
   const [main, dark] = PAL[colour];
   const F = FRAMES[frame];
-  const W = F.outline || OUTLINE;
+  const W = (F.outline || OUTLINE) * lineScale;
   ctx.save();
   ctx.translate(cx, by);
   ctx.scale(s * (flip ? -1 : 1), s);
@@ -485,7 +486,7 @@ function character(cx, by, colour, s = 1, flip = false, frame = 'idle') {
     if (p.cut) clipTo(sp, () => blob(p.cut, other));
     path(sp, true); stroke(W);
   }
-  for (const l of F.lines) pen(l.pts, l.w, INK, AMP);
+  for (const l of F.lines) pen(l.pts, l.w * lineScale, INK, AMP);
 
   if (F.visor.seed) seed = F.visor.seed;
   const vp = shape(F.visor.path, '#95cadc', W, AMP);

@@ -95,6 +95,6 @@ function swivelChair() {
 }
 
 registerProp('swivel_chair', {
-  w: 50, h: 93, ox: 24, oy: 80, draw: swivelChair,
+  w: 43, h: 77, ox: 21, oy: 66, scale: [0.82, 0.82], draw: swivelChair,
   pal: () => [INK, SWIVEL.lit, SWIVEL.dark, SWIVEL.metal, SWIVEL.metalDark, GROUND],
 });
