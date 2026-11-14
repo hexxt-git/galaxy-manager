@@ -205,7 +205,7 @@ const SPRITES = [
   { name: 'ui/use_button_pressed', w: BTN.w, h: BTN.h,
     pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => useButton('pressed') },
   { name: 'ui/use_button_disabled', w: BTN.w, h: BTN.h,
-    pal: [INK, C.off, C.offDark, C.offLip, C.offIcon], draw: () => useButton('disabled') },
+    pal: [INK, C.off, C.offDark, C.offLip, C.offIcon], draw: () => useButton('disabled'), alpha: 0.4 },
   { name: 'ui/panel', w: PANEL, h: PANEL, pal: [INK, C.frame, C.frameDark, C.metal], draw: panel },
   { name: 'ui/close_button', w: 28, h: 28, pal: [INK, C.red, C.redDark, C.white], draw: closeButton },
   { name: 'ui/screen_icon', w: 26, h: 26, pal: [INK, C.metal, C.metalDark, C.glow, C.glowDark], draw: screenIcon },
@@ -222,7 +222,16 @@ v.fillRect(0, 0, view.width, view.height);
 
 let y = GAP;
 for (const s of SPRITES) {
-  const px = pixelate(s.w, s.h, s.pal, c => { ctx = c; s.draw(); });
+  let px = pixelate(s.w, s.h, s.pal, c => { ctx = c; s.draw(); });
+  if (s.alpha) {
+    const faded = document.createElement('canvas');
+    faded.width = s.w;
+    faded.height = s.h;
+    const f = faded.getContext('2d');
+    f.globalAlpha = s.alpha;
+    f.drawImage(px, 0, 0);
+    px = faded;
+  }
   lines.push(s.name + ' ' + px.toDataURL('image/png'));
 
   v.font = 'bold 15px sans-serif';

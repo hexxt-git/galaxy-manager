@@ -1,6 +1,8 @@
 # Seamless floor tile: diamond checker with wobbly round-brush grout, drawn straight at art-pixel size.
 import sys, math, random, pathlib
 from PIL import Image, ImageDraw
+sys.path.insert(0, str(pathlib.Path(__file__).parent))  # -I leaves the script's folder off the path
+from contrast import soften
 
 out = pathlib.Path(sys.argv[1])
 DENSITY = 0.75                       # character ~70 art px tall
@@ -58,5 +60,5 @@ for i, j in vertices():
         for x, y in edge(a, b) if a <= b else edge(b, a):
             d.ellipse((x - BRUSH, y - BRUSH, x + BRUSH, y + BRUSH), fill=GROUT)
 
-img.save(out)
+soften(img).save(out)
 print(img.size)

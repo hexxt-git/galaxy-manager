@@ -2,6 +2,15 @@
 // Each art pixel is supersampled SxS; the most common pure palette colour wins, so anti-aliased
 // blends between two colours can never resolve to an unrelated third colour.
 const SUPER = 8;
+// Global contrast for all exported fills: palette colours move toward mid grey by this factor (1 = as authored).
+// Written as authored: the outline ink, and key colours swapped out later (ground shadow, character recolour).
+const CONTRAST = 0.9;
+const AS_AUTHORED = ['#0d0d12', '#ff00ff', '#ff0000', '#0000ff'];
+
+function soften(h) {
+  const c = hexRgb(h);
+  return AS_AUTHORED.includes(h.toLowerCase()) ? c : c.map(v => Math.round(128 + (v - 128) * CONTRAST));
+}
 
 function hexRgb(h) {
   const n = parseInt(h.slice(1), 16);
@@ -18,6 +27,7 @@ function pixelate(w, h, palette, draw) {
   const src = bctx.getImageData(0, 0, big.width, big.height).data;
 
   const pal = palette.map(hexRgb);
+  const outPal = palette.map(soften);
   const out = document.createElement('canvas');
   out.width = w;
   out.height = h;
@@ -45,9 +55,9 @@ function pixelate(w, h, palette, draw) {
       for (let p = 0; p <= pal.length; p++) if (votes[p] > wv) { wv = votes[p]; win = p; }
       const o = (y * w + x) * 4;
       if (win < pal.length) {
-        img.data[o] = pal[win][0];
-        img.data[o + 1] = pal[win][1];
-        img.data[o + 2] = pal[win][2];
+        img.data[o] = outPal[win][0];
+        img.data[o + 1] = outPal[win][1];
+        img.data[o + 2] = outPal[win][2];
         img.data[o + 3] = 255;
       }
     }

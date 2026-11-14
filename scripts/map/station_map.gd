@@ -70,7 +70,8 @@ const PROPS := {
 # back_wall false when the room shares the wall of the room above it.
 # side_doors: [side ("left"/"right"), floor line of the end cap above the opening]; cuts through merged walls.
 # light (optional, default 1): brightness of the floor, props and characters inside the room.
-# contrast (optional, default 1): colour exponent for the floor, props and workstations; above 1 is darker and richer.
+# contrast (optional, default 1): colour exponent for props and workstations; above 1 is darker and richer.
+# Floors and decals carry their room grade baked in (ROOM_GRADE in art-src/pixel/contrast.py).
 # shadow (optional, default 0.22, as exported): opacity of the ground shadows under props and characters.
 const ROOMS := [
 	{"name": "Cafeteria", "x": 0, "segs": 16, "back": 0, "front": 720, "back_wall": true, "doors": [2, 11], "floor": "floor_tile"},
@@ -160,18 +161,18 @@ func room_at(world: Vector2) -> Dictionary:
 	return {}
 
 
+# Every room gets the material, even unlit ones, so all ground shadows share the shader's colour.
 func _light(item: CanvasItem, room: Dictionary) -> void:
-	if not (room.has("light") or room.has("contrast") or room.has("shadow")):
-		return
-	if room.name not in _room_mats:
+	var key: String = room.get("name", "")
+	if key not in _room_mats:
 		var mat := ShaderMaterial.new()
 		mat.shader = ROOM_LIGHT
 		mat.set_shader_parameter("light", room.get("light", 1.0))
 		mat.set_shader_parameter("contrast", room.get("contrast", 1.0))
 		if room.has("shadow"):
 			mat.set_shader_parameter("shadow", room.shadow)
-		_room_mats[room.name] = mat
-	item.material = _room_mats[room.name]
+		_room_mats[key] = mat
+	item.material = _room_mats[key]
 
 
 func _load(path: String) -> Texture2D:
@@ -231,7 +232,6 @@ func _build_room(room: Dictionary) -> void:
 func _floor(room: Dictionary, rect: Rect2) -> void:
 	var fl := Sprite2D.new()
 	fl.texture = _load(FLOOR_DIR + room.floor + ".png")
-	_light(fl, room)
 	fl.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	fl.region_enabled = true
 	fl.region_rect = rect
@@ -527,7 +527,6 @@ func _scatter_decals(room: Dictionary, area: Rect2) -> void:
 		else:
 			pos = (area.position + Vector2(rng.randf() * (area.size.x - size.x), rng.randf() * (area.size.y - size.y))).floor()
 		var d := _sprite(tex, pos, Vector2.ZERO)
-		_light(d, room)
 		d.z_index = -9
 		d.z_as_relative = false
 		add_child(d)

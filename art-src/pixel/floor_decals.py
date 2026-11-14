@@ -3,10 +3,12 @@
 # storage_hatch and storage_hazard are 56x56 cells that snap to the storage tile grid (period 56, offset 0).
 import sys, math, random, pathlib
 from PIL import Image, ImageDraw
+sys.path.insert(0, str(pathlib.Path(__file__).parent))  # -I leaves the script's folder off the path
+from contrast import soften, grade
 
 # room_floors.py runs its export at import time, so only its helper definitions are executed.
 _src = (pathlib.Path(__file__).with_name('room_floors.py')).read_text()
-_ns = {}
+_ns = {'__file__': __file__}
 exec(_src.split('\nout = pathlib')[0], _ns)
 Wobble, stroke = _ns['Wobble'], _ns['stroke']
 
@@ -190,5 +192,5 @@ if __name__ == '__main__':
     out.mkdir(parents=True, exist_ok=True)
     for make in DECALS:
         img = make()
-        img.save(out / f'{make.__name__}.png')
+        grade(soften(img), make.__name__.split('_')[0]).save(out / f'{make.__name__}.png')
         print(make.__name__, img.size)

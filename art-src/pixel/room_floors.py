@@ -2,6 +2,8 @@
 # Usage: room_floors.py <out_dir>  ->  <out_dir>/storage.png, <out_dir>/control.png
 import sys, math, random, pathlib
 from PIL import Image, ImageDraw
+sys.path.insert(0, str(pathlib.Path(__file__).parent))  # -I leaves the script's folder off the path
+from contrast import soften, grade
 
 BRUSH = 1.6
 AMP = 1.4
@@ -109,5 +111,5 @@ out = pathlib.Path(sys.argv[1])
 out.mkdir(parents=True, exist_ok=True)
 for name, make in (('storage', storage), ('control', control)):
     img = make()
-    img.save(out / f'{name}.png')
+    grade(soften(img), name).save(out / f'{name}.png')
     print(name, img.size)

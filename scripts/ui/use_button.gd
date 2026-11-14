@@ -3,8 +3,6 @@ extends TextureButton
 
 ## HUD action button: enabled only while the detector has a focus, uses it on press.
 
-const DISABLED_ALPHA := 0.4
-
 @export var detector: InteractionDetector
 
 
@@ -21,7 +19,6 @@ func _on_focus_changed(target: Interactable) -> void:
 
 func _set_enabled(enabled: bool) -> void:
 	disabled = not enabled
-	modulate.a = 1.0 if enabled else DISABLED_ALPHA
 
 
 func _on_pressed() -> void:

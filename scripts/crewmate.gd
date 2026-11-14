@@ -13,25 +13,24 @@ const LEAN := 0.08
 const SWAY := 1.4
 const SETTLE_SPEED := 14.0
 const LIGHT_FADE := 4.0  # per second, when walking between rooms of different light
-# Ground shadow, matching the props' baked ones (GROUND_RGBA in art-src/props/prop.js). Art px, drawn at the map's SCALE.
-const SHADOW_RADII := Vector2(19, 5)
+const SHADOW_TEX := preload("res://assets/art/character/shadow.png")
+const GROUND_ALPHA := 56.0 / 255.0  # opacity every ground shadow is exported with
+# Art px, drawn at the map's SCALE.
 const SHADOW_SHIFT := Vector2(0, -1)
 const SHADOW_BACKPACK := 4.0  # shift toward the backpack side, which carries more of the body's weight
-const SHADOW_COLOR := Color8(24, 24, 40, 56)
-const SHADOW_WOBBLE := 0.12  # outline wander, as a fraction of the radius
 const SHADOW_Z := -7  # on the floor: under walls, side-wall tops and the sight overlay
 # name -> [body, shadow]
 const COLOURS := {
-	"red": [Color("c51111"), Color("7a0838")],
-	"blue": [Color("132ed1"), Color("09158e")],
-	"green": [Color("117f2d"), Color("0a4d2e")],
-	"pink": [Color("ed54ba"), Color("ab2bad")],
-	"orange": [Color("ef7d0d"), Color("b33e15")],
-	"yellow": [Color("f5f557"), Color("c38823")],
-	"black": [Color("3f474e"), Color("1e1f26")],
-	"white": [Color("d6e0f0"), Color("8394bf")],
-	"purple": [Color("6b2fbb"), Color("3b177c")],
-	"cyan": [Color("38fedc"), Color("24a8be")],
+	"red": [Color("c51111"), Color("900b2c")],
+	"blue": [Color("132ed1"), Color("0c1ca2")],
+	"green": [Color("117f2d"), Color("0c5c2e")],
+	"pink": [Color("ed54ba"), Color("bf37b1")],
+	"orange": [Color("ef7d0d"), Color("c55113")],
+	"yellow": [Color("f5f557"), Color("d2a933")],
+	"black": [Color("3f474e"), Color("282b32")],
+	"white": [Color("d6e0f0"), Color("9cabce")],
+	"purple": [Color("6b2fbb"), Color("491e8f")],
+	"cyan": [Color("38fedc"), Color("2ac2c7")],
 }
 
 @export_enum("red", "blue", "green", "pink", "orange", "yellow", "black", "white", "purple", "cyan")
@@ -49,8 +48,6 @@ var _shadow: Sprite2D
 var _shadow_mat: ShaderMaterial
 var _map: StationMap
 
-static var _shadow_tex: Texture2D
-
 
 func _ready() -> void:
 	_apply_colour()
@@ -61,22 +58,9 @@ func _ready() -> void:
 
 # A sibling of the sprite, so it stays on the ground while the sprite hops.
 func _make_shadow() -> Sprite2D:
-	if not _shadow_tex:
-		var half := (SHADOW_RADII * (1.0 + SHADOW_WOBBLE)).ceil()
-		var size := Vector2i(half * 2.0)
-		var img := Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBA8)
-		for y in size.y:
-			for x in size.x:
-				var p := (Vector2(x, y) + Vector2(0.5, 0.5) - half) / SHADOW_RADII
-				var a := p.angle()
-				var r := 1.0 + SHADOW_WOBBLE * (0.6 * sin(3.0 * a + 1.3) + 0.4 * sin(5.0 * a + 4.1))
-				if p.length() <= r:
-					img.set_pixel(x, y, SHADOW_COLOR)
-		_shadow_tex = ImageTexture.create_from_image(img)
 	var s := Sprite2D.new()
 	s.name = "Shadow"
-	s.texture = _shadow_tex
-	s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	s.texture = SHADOW_TEX
 	s.scale = Vector2(StationMap.SCALE, StationMap.SCALE)
 	s.z_index = SHADOW_Z
 	s.z_as_relative = false
@@ -97,7 +81,7 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(_map):
 		_map = get_tree().get_first_node_in_group("station_map") as StationMap
 	var room: Dictionary = _map.room_at(global_position) if _map else {}
-	var target := Vector2(room.get("light", 1.0), room.get("shadow", SHADOW_COLOR.a))
+	var target := Vector2(room.get("light", 1.0), room.get("shadow", GROUND_ALPHA))
 	_light = target if _light.x < 0.0 else _light.move_toward(target, LIGHT_FADE * delta)
 	(sprite.material as ShaderMaterial).set_shader_parameter("light", _light.x)
 	_shadow_mat.set_shader_parameter("light", _light.x)
