@@ -3,3 +3,11 @@
 /android/
 
 .local/
+
+# art-src: local reference images (third-party), python env, generated previews
+art-src/reference/
+art-src/trace/venv/
+__pycache__/
+art-src/**/*.png
+art-src/**/*.gif
+art-src/.venv/

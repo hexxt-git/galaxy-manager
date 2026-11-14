@@ -1,0 +1,246 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Workstation and UI</title>
+<style>
+  html, body { margin: 0; background: #9fd6e6; font: 13px sans-serif; }
+  canvas { display: block; margin: 0 auto; }
+  #out { display: none; }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<pre id="out"></pre>
+<script src="pixel/pixelate.js"></script>
+<script>
+// The pen helpers in character.js draw through a global `ctx`; it is repointed before each drawing.
+let ctx;
+</script>
+<script src="pixel/character.js"></script>
+<script>
+// All geometry is in art pixels (the sprite's native resolution).
+const W = 3.5;          // round-brush outline, same as the character at game density (5 units * 0.6975)
+const DETAIL = 2.5;     // thinner brush for small interior details
+
+const C = {
+  metal: '#9fb0c2', metalDark: '#66768c',
+  panel: '#3b4558',
+  glow: '#86eaa8', glowDark: '#3d9e7a',
+  red: '#c51111', redDark: '#7a0838',
+  white: '#ffffff',
+  btn: '#e1e8ef', btnDark: '#a9b6c7', btnLip: '#66768c',
+  off: '#b9bdc4', offDark: '#8f949c', offLip: '#62666e', offIcon: '#d6d8dc',
+  frame: '#46546b', frameDark: '#323d50',
+};
+
+// Polygon with every corner filleted by a quadratic arc of radius r (clamped to half the shorter edge).
+function roundPoly(c, r, seg = 8) {
+  const out = [];
+  const n = c.length;
+  for (let i = 0; i < n; i++) {
+    const p = c[i], a = c[(i + n - 1) % n], b = c[(i + 1) % n];
+    const la = Math.hypot(a[0] - p[0], a[1] - p[1]), lb = Math.hypot(b[0] - p[0], b[1] - p[1]);
+    const rr = Math.min(r, la / 2, lb / 2);
+    const p1 = [p[0] + (a[0] - p[0]) * rr / la, p[1] + (a[1] - p[1]) * rr / la];
+    const p2 = [p[0] + (b[0] - p[0]) * rr / lb, p[1] + (b[1] - p[1]) * rr / lb];
+    for (let k = 0; k <= seg; k++) {
+      const t = k / seg, u = 1 - t;
+      out.push([u * u * p1[0] + 2 * u * t * p[0] + t * t * p2[0], u * u * p1[1] + 2 * u * t * p[1] + t * t * p2[1]]);
+    }
+  }
+  return out;
+}
+
+const rect = (x0, y0, x1, y1, r) => roundPoly([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], r);
+
+function circle(cx, cy, r, n = 48) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push([cx + r * Math.cos(i / n * 2 * Math.PI), cy + r * Math.sin(i / n * 2 * Math.PI)]);
+  return out;
+}
+
+
+function part(pts, fill, cut, cutFill) {
+  const sp = shape(pts, fill, 0, AMP);
+  if (cut) clipTo(sp, () => blob(cut, cutFill));
+  path(sp, true); stroke(W);
+  return sp;
+}
+
+// --- workstation ------------------------------------------------------------
+// Origin is the bottom-centre of the front face where it meets the floor. Light from above: horizontal
+// faces take the lit tone, vertical faces the shadow tone. No glints: props are matte.
+
+function workstation(ox, oy) {
+  ctx.save();
+  ctx.translate(ox, oy);
+  seed = 301;
+
+  part(roundPoly([[-34, -37], [34, -37], [36, -13], [36, 0], [-36, 0], [-36, -13]], 5),
+    C.metal, [[-50, -13], [50, -13], [50, 10], [-50, 10]], C.metalDark);
+  pen([[-36, -13], [36, -13]], W, INK, AMP);
+
+  // keyboard slab, wider at the front for the slight perspective of the desk top
+  part(roundPoly([[-21, -28.5], [21, -28.5], [23, -18.5], [-23, -18.5]], 3), C.panel);
+  // keys snap to whole art pixels so the small grid stays even
+  for (const y of [-27, -23]) {
+    for (let x = -16; x < 17; x += 7) blob([[x, y], [x + 5, y], [x + 5, y + 2], [x, y + 2]], C.metal);
+  }
+
+  // monitor: lit top edge, shadowed front, screen
+  part(roundPoly([[-26, -67], [26, -67], [28, -61], [28, -34], [-28, -34], [-28, -61]], 4),
+    C.metalDark, [[-40, -61], [40, -61], [40, -80], [-40, -80]], C.metal);
+  pen([[-28, -61], [28, -61]], W, INK, AMP);
+  const scr = part(rect(-22.5, -56.5, 22.5, -38, 3), C.glow,
+    [...smooth([[-30, -42.5], [0, -43.5], [30, -46.5]], false, 3), [30, -30], [-30, -30]], C.glowDark);
+  clipTo(scr, () => {
+    pen([[-17, -52], [-4, -52]], DETAIL, C.glowDark, 0);
+    pen([[-17, -47.5], [6, -47.5]], DETAIL, C.glowDark, 0);
+  });
+  path(scr, true); stroke(W);
+
+  // status light and a button on the front face
+  for (const [pts, fill] of [[rect(-30.5, -9.5, -18.5, -3.5, 3), C.glow], [circle(26.5, -6.5, 4, 24), C.red]]) {
+    path(pts, true); ctx.fillStyle = fill; ctx.fill(); stroke(DETAIL);
+  }
+
+  ctx.restore();
+}
+
+// --- UI ----------------------------------------------------------------------
+
+// Pointing hand, about 22 x 27 px, centred on (0, 0).
+const HAND = smooth([
+  [-6.5, -2], [-6.5, -12.5], [-5.5, -15.5], [-2, -15.5], [-1, -12.5], [-1, -5.5],
+  [0.5, -7], [3, -7], [4, -5.5], [5, -6], [7, -5.5], [8, -4], [9, -4], [10.5, -2.5], [10.5, 1],
+  [10.5, 5], [8.5, 10], [3, 11.5], [-3, 11],
+  [-7.5, 8.5], [-10, 4.5], [-11, 0.5], [-10, -2], [-8, -2.5],
+], true, 3);
+const HAND_LINES = [
+  [[3.8, -5.5], [3.8, -1.5]],
+  [[7.8, -4], [7.8, -0.5]],
+  [[-7, -1], [-5, 3], [-1.5, 4.5]],
+];
+
+function hand(x, y, fill, shade) {
+  ctx.save();
+  ctx.translate(x, y);
+  seed = 401;
+  part(HAND, fill, [...smooth([[12, 2], [4, 7.5], [-6, 7], [-12, 3]], false, 3), [-12, 14], [12, 14]], shade);
+  for (const l of HAND_LINES) pen(smooth(l, false, 2), DETAIL, INK, AMP);
+  ctx.restore();
+}
+
+// Hand-lettered "USE", each glyph 7 x 12 px, 4 px apart, starting at (x, y) top-left.
+const GLYPHS = {
+  U: [[[0, 0], [0, 8], [1.2, 11], [3.5, 12], [5.8, 11], [7, 8], [7, 0]]],
+  S: [[[7, 1.5], [5, 0], [2, 0], [0, 2.2], [1, 5], [3.5, 6], [6, 7], [7, 9.6], [5.2, 12], [2, 12], [0, 10.5]]],
+  E: [[[7, 0], [0, 0], [0, 12], [7, 12]], [[0, 6], [5.5, 6]]],
+};
+
+function letters(text, x, y, color) {
+  seed = 501;
+  [...text].forEach((ch, i) => {
+    for (const s of GLYPHS[ch]) {
+      const pts = s.map(([px, py]) => [x + i * 11 + px, y + py]);
+      pen(ch === 'E' ? pts : smooth(pts, false, 2), W, color, AMP);
+    }
+  });
+}
+
+const BTN = { w: 76, h: 80 };
+
+function useButton(state) {
+  const off = state === 'disabled';
+  const [face, faceDark, lip, icon] = off ? [C.off, C.offDark, C.offLip, C.offIcon] : [C.btn, C.btnDark, C.btnLip, C.white];
+  const cx = 38, cy = 36, R = 34, dy = state === 'pressed' ? 4 : 0;
+  seed = 601;
+  part(circle(cx, cy + 6, R), lip);
+  part(circle(cx, cy + dy, R), face,
+    [...smooth([[cx + 40, cy + dy - 6], [cx + 18, cy + dy + 22], [cx - 12, cy + dy + 30], [cx - 40, cy + dy + 22]], false, 3),
+      [cx - 40, cy + 60], [cx + 40, cy + 60]], faceDark);
+  hand(cx, cy + dy - 10, icon, off ? C.offDark : C.btnDark);
+  letters('USE', cx - 14.5, cy + dy + 7.5, off ? C.offLip : INK);
+}
+
+// 9-slice frame: 20 px margins on every side; the header strip and bottom shadow band sit inside the margins.
+const PANEL = 56, PANEL_MARGIN = 20, HEADER = 18;
+function panel() {
+  seed = 701;
+  const fr = rect(1.75, 1.75, PANEL - 1.75, PANEL - 1.75, 8);
+  path(fr, true);
+  ctx.fillStyle = C.frame; ctx.fill();
+  clipTo(fr, () => {
+    blob([[0, 0], [PANEL, 0], [PANEL, HEADER], [0, HEADER]], C.metal);
+    blob([[0, PANEL - 7], [PANEL, PANEL - 7], [PANEL, PANEL], [0, PANEL]], C.frameDark);
+  });
+  ctx.beginPath(); ctx.moveTo(0, HEADER); ctx.lineTo(PANEL, HEADER); stroke(W);
+  path(fr, true); stroke(W);
+}
+
+function closeButton() {
+  seed = 801;
+  part(rect(1.75, 5.75, 26.25, 26.25, 6), C.redDark);
+  part(rect(1.75, 1.75, 26.25, 20.25, 6), C.red);
+  pen([[9.5, 6.5], [18.5, 15.5]], W, C.white, 0);
+  pen([[18.5, 6.5], [9.5, 15.5]], W, C.white, 0);
+}
+
+function screenIcon() {
+  seed = 901;
+  part(rect(7, 17, 19, 24, 2), C.metal);
+  part(rect(2.75, 2.75, 23.25, 19.25, 3.5), C.glow, [[0, 12], [30, 10.5], [30, 30], [0, 30]], C.glowDark);
+  pen([[7.5, 8], [13, 8]], DETAIL, C.glowDark, 0);
+}
+
+// --- sprites -----------------------------------------------------------------
+
+const WS = { w: 86, h: 81, ox: 43, oy: 74 };
+const SPRITES = [
+  { name: 'props/workstation', w: WS.w, h: WS.h,
+    pal: [INK, C.metal, C.metalDark, C.panel, C.glow, C.glowDark, C.red], draw: () => workstation(WS.ox, WS.oy) },
+  { name: 'ui/use_button', w: BTN.w, h: BTN.h,
+    pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => useButton('normal') },
+  { name: 'ui/use_button_pressed', w: BTN.w, h: BTN.h,
+    pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => useButton('pressed') },
+  { name: 'ui/use_button_disabled', w: BTN.w, h: BTN.h,
+    pal: [INK, C.off, C.offDark, C.offLip, C.offIcon], draw: () => useButton('disabled') },
+  { name: 'ui/panel', w: PANEL, h: PANEL, pal: [INK, C.frame, C.frameDark, C.metal], draw: panel },
+  { name: 'ui/close_button', w: 28, h: 28, pal: [INK, C.red, C.redDark, C.white], draw: closeButton },
+  { name: 'ui/screen_icon', w: 26, h: 26, pal: [INK, C.metal, C.metalDark, C.glow, C.glowDark], draw: screenIcon },
+];
+
+const lines = [];
+const view = document.getElementById('view');
+const VEC = 4, PIX = 2, GAP = 24;
+view.width = 1300;
+view.height = SPRITES.reduce((a, s) => a + s.h * VEC + GAP + 16, GAP);
+const v = view.getContext('2d');
+v.fillStyle = '#9fd6e6';
+v.fillRect(0, 0, view.width, view.height);
+
+let y = GAP;
+for (const s of SPRITES) {
+  const px = pixelate(s.w, s.h, s.pal, c => { ctx = c; s.draw(); });
+  lines.push(s.name + ' ' + px.toDataURL('image/png'));
+
+  v.font = 'bold 15px sans-serif';
+  v.fillStyle = '#123';
+  v.fillText(s.name + ' (' + s.w + 'x' + s.h + ')', 20, y);
+  v.save();
+  v.translate(20, y + 8);
+  v.scale(VEC, VEC);
+  ctx = v;
+  s.draw();
+  v.restore();
+  blit(v, px, 60 + s.w * VEC, y + 8, PIX);
+  blit(v, px, 100 + s.w * (VEC + PIX), y + 8, VEC);
+  y += s.h * VEC + GAP + 16;
+}
+lines.push('origin props/workstation ' + WS.ox + ' ' + WS.oy);
+lines.push('ninepatch ui/panel ' + PANEL_MARGIN);
+document.getElementById('out').textContent = lines.join('\n');
+</script>
+</body>
+</html>

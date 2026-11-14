@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pixel Crewmates</title>
+<style>
+  html, body { margin: 0; background: #9fd6e6; }
+  canvas { display: block; margin: 0 auto; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="out" width="1200" height="1010"></canvas>
+<script src="pixelate.js"></script>
+<script>
+// character.js draws through a global `ctx`; each pixelate() call points it at its own canvas.
+let ctx;
+</script>
+<script src="character.js"></script>
+<script>
+const PX = 3;
+const SW = 86, SH = 104;
+const out = document.getElementById('out').getContext('2d');
+
+function characterSprite(colour, flip) {
+  const [main, dark] = PAL[colour];
+  return pixelate(SW, SH, [INK, main, dark, '#95cadc', '#4f7d93', '#ffffff'], c => {
+    ctx = c;
+    character(flip ? 51 : 35, 93.75, colour, 0.93, !flip);
+  });
+}
+
+Object.keys(PAL).forEach((colour, i) => {
+  const col = i % 4, row = Math.floor(i / 4);
+  blit(out, characterSprite(colour, i % 2 === 1), 30 + col * 290, 20 + row * 330, PX);
+});
+</script>
+</body>
+</html>

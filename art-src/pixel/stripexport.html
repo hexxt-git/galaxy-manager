@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Strip Export</title></head>
+<body><pre id="out"></pre>
+<script src="pixelate.js"></script>
+<script>let ctx;</script>
+<script src="character.js"></script>
+<script>
+// One horizontal strip per colour: idle, walk1..walk4, all facing right, feet at the same origin.
+// DENSITY scales the art-pixel resolution; 1 matches the sprite sheet.
+const DENSITY = 0.75;
+const SW = Math.ceil(100 * DENSITY), SH = Math.ceil(106 * DENSITY), OX = 50.2 * DENSITY, OY = 102.75 * DENSITY;
+const FR = ['idle'];
+const lines = [];
+// Body is keyed pure red (lit) and pure blue (shadow); the game recolours those two at runtime.
+PAL.key = ['#ff0000', '#0000ff'];
+{
+  const cv = document.createElement('canvas');
+  cv.width = SW * FR.length;
+  cv.height = SH;
+  const g = cv.getContext('2d');
+  FR.forEach((fr, i) => {
+    const s = pixelate(SW, SH, [INK, '#ff0000', '#0000ff', '#95cadc', '#4f7d93', '#ffffff'], h => { ctx = h; character(OX, OY, 'key', 0.93 * DENSITY, false, fr); });
+    g.drawImage(s, i * SW, 0);
+  });
+  lines.push('character ' + cv.toDataURL('image/png'));
+  lines.push('origin ' + OX + ' ' + OY);
+}
+document.getElementById('out').textContent = lines.join('\n');
+</script></body></html>

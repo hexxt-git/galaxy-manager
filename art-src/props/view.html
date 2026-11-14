@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Props</title>
+<style>
+  html, body { margin: 0; background: #9fd6e6; font: 13px sans-serif; }
+  canvas { display: block; margin: 0 auto; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="out"></canvas>
+<pre id="dump"></pre>
+<script src="../pixel/pixelate.js"></script>
+<script>
+// character.js draws through a global `ctx`; each pixelate() call points it at its own canvas.
+let ctx;
+</script>
+<script src="../pixel/character.js"></script>
+<script src="prop.js"></script>
+<script>
+// view.html?crate,bench shows those props; view.html?crate,bench&export dumps them for export_godot.sh.
+const names = location.search.slice(1).split('&')[0].split(',').filter(Boolean);
+(function load(i) {
+  if (i === names.length) return propPage(Object.keys(PROPS));
+  const el = document.createElement('script');
+  el.src = names[i] + '.js';
+  el.onload = () => load(i + 1);
+  document.body.appendChild(el);
+})(0);
+</script>
+</body>
+</html>
