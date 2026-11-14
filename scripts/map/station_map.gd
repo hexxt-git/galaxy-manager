@@ -21,6 +21,15 @@ const DOOR_GAP := Vector2(34, 94)  # opening inside wall_door, x range
 
 const PROP_DIR := "res://assets/art/props/"
 const FLOOR_DIR := "res://assets/art/"
+const DECAL_DIR := "res://assets/art/floors/decals/"
+# Floor details scattered per room, keyed by floor. Whole-tile ones snap to the floor's tile grid.
+const DECALS := {
+	"floor_tile": ["cafeteria_crack", "cafeteria_drain", "cafeteria_scuff", "cafeteria_stain"],
+	"floors/storage": ["storage_hatch", "storage_hazard", "storage_oil", "storage_scuff"],
+	"floors/control": ["control_cable_cover", "control_scorch", "control_grate"],
+}
+const DECAL_SNAP := {"storage_hatch": 56, "storage_hazard": 56}
+const DECAL_AREA := 14000.0  # art px² of floor per decal
 const WORKSTATION := preload("res://scenes/workstation.tscn")
 
 # origin and floor footprint in art px; footprint Rect2 is relative to the origin, or a Vector2 for ellipse radii
@@ -136,6 +145,7 @@ func _build_room(room: Dictionary) -> void:
 	fl.z_index = -10
 	fl.z_as_relative = false
 	add_child(fl)
+	_scatter_decals(room, Rect2(x0, back, x1 - x0, front - WALL_ORIGIN_Y - back))
 
 	_strips.append([x0 - CORNER_W, x0, back, front])
 	_strips.append([x1, x1 + CORNER_W, back, front])
@@ -330,3 +340,35 @@ func _add_prop(name: String, pos: Vector2) -> void:
 		body.position = pos * SCALE
 		body.add_child(poly)
 		add_child(body)
+
+
+# Seeded by room name, so the layout is the same every run.
+func _scatter_decals(room: Dictionary, area: Rect2) -> void:
+	var names: Array = DECALS.get(room.floor, [])
+	if names.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(room.name)
+	for k in int(area.get_area() / DECAL_AREA):
+		var name: String = names[rng.randi() % names.size()]
+		var tex: Texture2D = load(DECAL_DIR + name + ".png")
+		var size := tex.get_size()
+		var pos: Vector2
+		if name in DECAL_SNAP:
+			var cell: float = DECAL_SNAP[name]
+			var cells := ((area.size - size) / cell).floor()
+			if cells.x < 0 or cells.y < 0:
+				continue
+			pos = ((area.position / cell).ceil() + Vector2(rng.randi_range(0, int(cells.x)), rng.randi_range(0, int(cells.y)))) * cell
+			if not area.encloses(Rect2(pos, size)):
+				continue
+		else:
+			pos = (area.position + Vector2(rng.randf() * (area.size.x - size.x), rng.randf() * (area.size.y - size.y))).floor()
+		var d := Sprite2D.new()
+		d.texture = tex
+		d.centered = false
+		d.scale = Vector2(SCALE, SCALE)
+		d.position = pos * SCALE
+		d.z_index = -9
+		d.z_as_relative = false
+		add_child(d)
