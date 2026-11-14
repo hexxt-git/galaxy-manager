@@ -2,6 +2,9 @@ extends CharacterBody2D
 
 ## Shared look of the player and bots: recoloured character sprite with a hopping walk.
 
+const StationMap := preload("res://scripts/map/station_map.gd")
+const ROOM_LIGHT := preload("res://assets/shaders/room_light.gdshader")
+
 const SPEED := 390.0
 # Bounce walk: each step is a hop that leans to alternating sides.
 const STEPS_PER_SEC := 5.6
@@ -10,13 +13,12 @@ const LEAN := 0.08
 const SWAY := 1.4
 const SETTLE_SPEED := 14.0
 const LIGHT_FADE := 4.0  # per second, when walking between rooms of different light
-# Ground shadow, matching the props' baked ones (GROUND_RGBA in art-src/props/prop.js). Art px at the map's scale.
+# Ground shadow, matching the props' baked ones (GROUND_RGBA in art-src/props/prop.js). Art px, drawn at the map's SCALE.
 const SHADOW_RADII := Vector2(19, 5)
 const SHADOW_SHIFT := Vector2(0, -1)
 const SHADOW_BACKPACK := 4.0  # shift toward the backpack side, which carries more of the body's weight
 const SHADOW_COLOR := Color8(24, 24, 40, 56)
 const SHADOW_WOBBLE := 0.12  # outline wander, as a fraction of the radius
-const SHADOW_SCALE := 2.0  # station_map.gd SCALE
 const SHADOW_Z := -7  # on the floor: under walls, side-wall tops and the sight overlay
 # name -> [body, shadow]
 const COLOURS := {
@@ -44,6 +46,8 @@ var colour := "red":
 var _step := 0.0
 var _light := Vector2(-1, -1)  # room light, ground shadow opacity
 var _shadow: Sprite2D
+var _shadow_mat: ShaderMaterial
+var _map: StationMap
 
 static var _shadow_tex: Texture2D
 
@@ -73,29 +77,31 @@ func _make_shadow() -> Sprite2D:
 	s.name = "Shadow"
 	s.texture = _shadow_tex
 	s.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	s.scale = Vector2(SHADOW_SCALE, SHADOW_SCALE)
+	s.scale = Vector2(StationMap.SCALE, StationMap.SCALE)
 	s.z_index = SHADOW_Z
 	s.z_as_relative = false
-	s.material = ShaderMaterial.new()
-	s.material.shader = preload("res://assets/shaders/room_light.gdshader")
+	_shadow_mat = ShaderMaterial.new()
+	_shadow_mat.shader = ROOM_LIGHT
+	s.material = _shadow_mat
 	return s
 
 
 # The unflipped sprite faces right, backpack on the left.
 func _place_shadow() -> void:
 	var back := SHADOW_BACKPACK if sprite.flip_h else -SHADOW_BACKPACK
-	_shadow.position = (SHADOW_SHIFT + Vector2(back, 0)) * SHADOW_SCALE
+	_shadow.position = (SHADOW_SHIFT + Vector2(back, 0)) * StationMap.SCALE
 	_shadow.flip_h = sprite.flip_h
 
 
 func _process(delta: float) -> void:
-	var map := get_tree().get_first_node_in_group("station_map")
-	var room: Dictionary = map.room_at(global_position) if map else {}
+	if not is_instance_valid(_map):
+		_map = get_tree().get_first_node_in_group("station_map") as StationMap
+	var room: Dictionary = _map.room_at(global_position) if _map else {}
 	var target := Vector2(room.get("light", 1.0), room.get("shadow", SHADOW_COLOR.a))
 	_light = target if _light.x < 0.0 else _light.move_toward(target, LIGHT_FADE * delta)
 	(sprite.material as ShaderMaterial).set_shader_parameter("light", _light.x)
-	_shadow.material.set_shader_parameter("light", _light.x)
-	_shadow.material.set_shader_parameter("shadow", _light.y)
+	_shadow_mat.set_shader_parameter("light", _light.x)
+	_shadow_mat.set_shader_parameter("shadow", _light.y)
 
 
 func _apply_colour() -> void:

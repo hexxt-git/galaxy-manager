@@ -10,3 +10,4 @@ __pycache__/
 art-src/**/*.png
 art-src/**/*.gif
 art-src/.venv/
+art-src/**/*.dom

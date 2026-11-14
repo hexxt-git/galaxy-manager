@@ -6,13 +6,6 @@ shader_type canvas_item;
 const float SHADOW_KEY = 56.0 / 255.0;
 uniform float shadow = 0.2196;  // SHADOW_KEY
 
-// fragment()'s COLOR already includes the texture, so take the plain modulate from vertex().
-varying vec4 modulate;
-
-void vertex() {
-	modulate = COLOR;
-}
-
 void fragment() {
 	vec4 c = texture(TEXTURE, UV);
 	if (abs(c.a - SHADOW_KEY) < 2.0 / 255.0) {

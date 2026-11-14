@@ -9,8 +9,7 @@ ART = ROOT / 'assets/art'
 
 def table(name):
     body = re.search(r'const %s := \[(.*?)\n\]' % name, src, re.S).group(1)
-    body = re.sub(r'Vector2\(([^)]*)\)', r'[\1]', body).replace('true', 'true').replace('false', 'false')
-    body = re.sub(r'"(\w+)":', r'"\1":', body)
+    body = re.sub(r'Vector2\(([^)]*)\)', r'[\1]', body)
     return json.loads('[' + re.sub(r',\s*$', '', body.strip()) + ']')
 
 def const(name):
@@ -74,8 +73,7 @@ for x0, x1, top, bot, doors, fls in merged:
         floor(left, x0, y0 - WO, mid - x0, y1 - y0 + WO); floor(right, mid, y0 - WO, x1 - mid, y1 - y0 + WO)
         door_lines += [y0, y1]; top = y1
     pieces.append([x0, x1, top, bot])
-merged = pieces
-for x0, x1, top, bot in merged:
+for x0, x1, top, bot in pieces:
     h = bot - FACE - top
     for n, x, w in (('wall_v', x0, x1 - x0), ('wall_ink', x0 - 2, 4), ('wall_ink', x1 - 2, 4)):
         layers.append((-5, 0, tiled(n, x, top, w, h), x, top))
@@ -89,7 +87,7 @@ for y in door_lines:
     if y not in walls: walls[y] = []
 for y, ws in walls.items():
     spans = [(a, b, 0) for a, b, _ in ws]
-    spans += [(s[0], s[1], 1) for s in merged if s[3] == y] + [(s[0], s[1], 2) for s in merged if s[2] == y]
+    spans += [(s[0], s[1], 1) for s in pieces if s[3] == y] + [(s[0], s[1], 2) for s in pieces if s[2] == y]
     cuts = sorted({x for sp in spans for x in sp[:2]})
     runs = [[cuts[0], cuts[0], -1]]
     for a, b in zip(cuts, cuts[1:]):

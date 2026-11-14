@@ -2,10 +2,9 @@ extends "res://scripts/crewmate.gd"
 
 ## Wanders the station: walks a NavGrid path to a random spot, maybe pauses, then picks another.
 
-const NavGrid := preload("res://scripts/bots/nav_grid.gd")
-
 signal target_reached
 
+const NavGrid := preload("res://scripts/bots/nav_grid.gd")
 const PAUSE := Vector2(0.3, 1.5)
 const PAUSE_CHANCE := 0.5
 const MIN_TRIP := 200.0

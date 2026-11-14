@@ -10,7 +10,7 @@ uniform float reach = 380.0;   // world px, how far they run along the walls
 uniform float strength = 0.3;  // inner band; the outer one gets half
 uniform float outer = 0.1;
 uniform float inner = 0.35;
-uniform float pixel = 4.0;     // world px, matches the sight shadow grid
+uniform float pixel = 4.0;     // world px, set from vision.gd PIXEL so it matches the sight shadow grid
 uniform float wobble = 0.18;   // band edge wander, as a fraction of radius
 uniform float wobble_scale = 90.0;  // world px per noise cell
 

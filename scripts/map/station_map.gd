@@ -34,6 +34,7 @@ const DECAL_AREA := {"floor_tile": 45000.0, "floors/storage": 14000.0, "floors/c
 const WORKSTATION := preload("res://scenes/workstation.tscn")
 const ROOM_LIGHT := preload("res://assets/shaders/room_light.gdshader")
 const FLOOR_AO := preload("res://assets/shaders/floor_ao.gdshader")
+const Vision := preload("res://scripts/map/vision.gd")
 # Corner darkening on floors. Each point of light below 1 adds the *_DIM amounts, so dim rooms get deeper corners.
 const AO_RADIUS := 35.0   # art px out of the corner
 const AO_REACH := 133.0   # art px along the walls
@@ -122,12 +123,12 @@ const STATIONS := [
 
 var floor_rects: Array[Rect2] = []  # every floor region drawn, in world px
 
-var _textures := {}
-var _room_mats := {}  # room name -> ShaderMaterial, for rooms with their own lighting
-var _strips := []  # side walls: [x0, x1, top floor line, bottom floor line, side door ys, {side: floor of the room there}]
-var _walls := {}   # floor line -> [[x0, x1, doors], ...]
-var _h_sight := []  # horizontal wall pieces that block sight: [x0, x1, floor line]
-var _v_sight := []  # side wall pieces: [x0, x1, top floor line, bottom floor line, top is a door jamb, bottom is one]
+var _textures: Dictionary[String, Texture2D] = {}
+var _room_mats: Dictionary[String, ShaderMaterial] = {}  # by room name, for rooms with their own lighting
+var _strips: Array = []  # side walls: [x0, x1, top floor line, bottom floor line, side door ys, {side: the room there}]
+var _walls: Dictionary = {}  # floor line -> [[x0, x1, doors], ...]
+var _h_sight: Array = []  # horizontal wall pieces that block sight: [x0, x1, floor line]
+var _v_sight: Array = []  # side wall pieces: [x0, x1, top floor line, bottom floor line, top is a door jamb, bottom is one]
 
 
 func _ready() -> void:
@@ -173,10 +174,14 @@ func _light(item: CanvasItem, room: Dictionary) -> void:
 	item.material = _room_mats[room.name]
 
 
+func _load(path: String) -> Texture2D:
+	if path not in _textures:
+		_textures[path] = load(path)
+	return _textures[path]
+
+
 func _tex(name: String) -> Texture2D:
-	if name not in _textures:
-		_textures[name] = load(PROP_DIR + name + ".png")
-	return _textures[name]
+	return _load(PROP_DIR + name + ".png")
 
 
 func _sprite(tex: Texture2D, pos: Vector2, origin: Vector2) -> Sprite2D:
@@ -208,8 +213,9 @@ func _build_room(room: Dictionary) -> void:
 
 	var floor_top := back - WALL_ORIGIN_Y if room.back_wall else back
 	_floor(room, Rect2(x0, floor_top, x1 - x0, front - floor_top))
-	_scatter_decals(room, Rect2(x0, back, x1 - x0, front - WALL_ORIGIN_Y - back))
-	_floor_ao(room, Rect2(x0, back, x1 - x0, front - WALL_ORIGIN_Y - back))
+	var visible_floor := Rect2(x0, back, x1 - x0, front - WALL_ORIGIN_Y - back)
+	_scatter_decals(room, visible_floor)
+	_floor_ao(room, visible_floor)
 
 	var side := {"left": [], "right": []}
 	for d in room.get("side_doors", []):
@@ -224,7 +230,7 @@ func _build_room(room: Dictionary) -> void:
 # A world-aligned region of the repeating floor tile, so neighbouring floors line up.
 func _floor(room: Dictionary, rect: Rect2) -> void:
 	var fl := Sprite2D.new()
-	fl.texture = load(FLOOR_DIR + room.floor + ".png")
+	fl.texture = _load(FLOOR_DIR + room.floor + ".png")
 	_light(fl, room)
 	fl.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	fl.region_enabled = true
@@ -248,6 +254,7 @@ func _floor_ao(room: Dictionary, rect: Rect2) -> void:
 	mat.set_shader_parameter("radius", (AO_RADIUS + dark * AO_DIM_RADIUS) * SCALE)
 	mat.set_shader_parameter("reach", (AO_REACH + dark * AO_DIM_REACH) * SCALE)
 	mat.set_shader_parameter("strength", AO_STRENGTH + dark * AO_DIM_STRENGTH)
+	mat.set_shader_parameter("pixel", float(Vision.PIXEL))
 	var ao := ColorRect.new()
 	ao.material = mat
 	ao.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -265,8 +272,8 @@ func _add_wall(y: float, wall: Array) -> void:
 
 
 func _build_walls() -> void:
-	_strips.sort_custom(func(a, b): return a[0] < b[0])
-	var strips := []
+	_strips.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	var strips: Array = []
 	for s in _strips:
 		var joined := false
 		for m in strips:
@@ -280,8 +287,8 @@ func _build_walls() -> void:
 
 	# Side doors split a strip into pieces: the one above ends in a wall face (a band of column kind 1),
 	# the one below starts again SIDE_DOOR of floor further down (kind 2), like a room's back corners.
-	var pieces := []
-	var door_lines := []
+	var pieces: Array = []
+	var door_lines: Array = []
 	for s in strips:
 		var doors: Array = s[4]
 		doors.sort()
@@ -347,12 +354,12 @@ func _build_wall(x0: float, x1: float, y: float, doors: Array) -> void:
 	_h_sight.append([sight_from, x1 + CORNER_W + MERGE_GAP, y])
 
 
-## Lines (in world px) that block sight from eye. Each wall blocks along its edge farthest from chooser
+## Lines (in world px) that block sight. Each wall blocks along its edge farthest from chooser
 ## (normally the eye), so the wall itself stays visible and its shadow starts where the floor beyond it begins.
-func sight_segments(eye: Vector2, chooser: Vector2) -> Array:
+func sight_segments(chooser: Vector2) -> Array:
 	var c := chooser / SCALE
 	var edge := func(y: float) -> float: return y if c.y < y - WALL_ORIGIN_Y / 2.0 else y - WALL_ORIGIN_Y
-	var out := []
+	var out: Array = []
 	for h in _h_sight:
 		var y: float = edge.call(h[2])
 		out.append([Vector2(h[0], y) * SCALE, Vector2(h[1], y) * SCALE])
@@ -374,7 +381,7 @@ func sight_segments(eye: Vector2, chooser: Vector2) -> Array:
 ## Which edge of every wall blocks sight from eye; changes exactly when sight_segments would switch edges.
 func sight_key(eye: Vector2) -> Array:
 	var e := eye / SCALE
-	var key := []
+	var key: Array[bool] = []
 	for y in _walls:
 		key.append(e.y < y - WALL_ORIGIN_Y / 2.0)
 	for v in _v_sight:
@@ -390,7 +397,7 @@ func sight_key(eye: Vector2) -> Array:
 # Splits the band along floor line y into runs of one column kind (-1: nothing) and draws fills over wall_h,
 # ink seams wherever neighbouring kinds differ, and wall_corner pieces at the outer ends.
 func _build_joins(y: float, walls: Array, strips: Array) -> void:
-	var spans := []
+	var spans: Array = []
 	for w in walls:
 		spans.append([w[0], w[1], 0])
 	for s in strips:
@@ -398,7 +405,7 @@ func _build_joins(y: float, walls: Array, strips: Array) -> void:
 			spans.append([s[0], s[1], 1])
 		elif s[2] == y:
 			spans.append([s[0], s[1], 2])
-	var cuts := []
+	var cuts: Array = []
 	for sp in spans:
 		for x in [sp[0], sp[1]]:
 			if x not in cuts:
@@ -506,7 +513,7 @@ func _scatter_decals(room: Dictionary, area: Rect2) -> void:
 	rng.seed = hash(room.name)
 	for k in int(area.get_area() / DECAL_AREA[room.floor]):
 		var name: String = names[rng.randi() % names.size()]
-		var tex: Texture2D = load(DECAL_DIR + name + ".png")
+		var tex := _load(DECAL_DIR + name + ".png")
 		var size := tex.get_size()
 		var pos: Vector2
 		if name in DECAL_SNAP:
@@ -519,11 +526,7 @@ func _scatter_decals(room: Dictionary, area: Rect2) -> void:
 				continue
 		else:
 			pos = (area.position + Vector2(rng.randf() * (area.size.x - size.x), rng.randf() * (area.size.y - size.y))).floor()
-		var d := Sprite2D.new()
-		d.texture = tex
-		d.centered = false
-		d.scale = Vector2(SCALE, SCALE)
-		d.position = pos * SCALE
+		var d := _sprite(tex, pos, Vector2.ZERO)
 		_light(d, room)
 		d.z_index = -9
 		d.z_as_relative = false

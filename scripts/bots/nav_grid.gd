@@ -11,6 +11,7 @@ const TARGET_CLEAR := 3  # random targets need this much clearance
 const PULL_LOOKAHEAD := 24
 const CORNER_RADIUS := 64.0
 const ARC_STEPS := 6
+const NEIGHBOURS: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 
 var astar := AStarGrid2D.new()
 var targets := PackedVector2Array()
@@ -99,19 +100,20 @@ func _keep_largest_component(free: PackedByteArray) -> void:
 	var comp := PackedInt32Array()
 	comp.resize(free.size())
 	comp.fill(-1)
-	var sizes := []
+	var sizes: Array[int] = []
 	for start in free.size():
 		if free[start] == 0 or comp[start] >= 0:
 			continue
 		var c := sizes.size()
-		var stack := [start]
+		var stack := PackedInt32Array([start])
 		comp[start] = c
 		var size := 0
 		while not stack.is_empty():
-			var i: int = stack.pop_back()
+			var i := stack[stack.size() - 1]
+			stack.remove_at(stack.size() - 1)
 			size += 1
 			var id := _cell(i)
-			for d in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			for d in NEIGHBOURS:
 				var j := _index(id + d)
 				if j >= 0 and free[j] == 1 and comp[j] < 0:
 					comp[j] = c

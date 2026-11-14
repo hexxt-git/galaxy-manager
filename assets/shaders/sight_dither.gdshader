@@ -5,7 +5,7 @@ render_mode blend_mul, unshaded;
 uniform sampler2D mask_old : filter_nearest;
 uniform sampler2D mask_new : filter_nearest;
 uniform float t = 1.0;
-uniform vec4 dim : source_color = vec4(0.7, 0.7, 0.74, 1.0);
+uniform vec4 dim : source_color = vec4(0.7, 0.7, 0.74, 1.0);  // set from vision.gd DIM
 // mask pixel position of the texture's top-left in world mask pixels, so the dither pattern stays put in the world
 uniform vec2 grid_origin = vec2(0.0);
 

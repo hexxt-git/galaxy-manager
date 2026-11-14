@@ -2,12 +2,11 @@ extends Node2D
 
 ## Spawns wandering bots on the map's walkable floor, once its collisions are in the physics space.
 
+signal spawned
+
 const BOT := preload("res://scenes/bot.tscn")
 const Bot := preload("res://scripts/bots/bot.gd")
-const NavGrid := preload("res://scripts/bots/nav_grid.gd")
-const Crewmate := preload("res://scripts/crewmate.gd")
-
-signal spawned
+const NavGrid := Bot.NavGrid
 
 @export var map: Node2D
 @export var count := 6
@@ -32,7 +31,7 @@ func _ready() -> void:
 	nav = NavGrid.new()
 	nav.build(get_world_2d().direct_space_state, bots[0].get_node("Feet"), map.floor_rects, exclude)
 
-	var colours: Array = Crewmate.COLOURS.keys()
+	var colours: Array = Bot.COLOURS.keys()
 	for p in players:
 		colours.erase(p.colour)
 	colours.shuffle()

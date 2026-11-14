@@ -6,13 +6,6 @@ uniform vec4 shadow_color : source_color = vec4(0.478, 0.031, 0.220, 1.0);
 
 #include "res://assets/shaders/room_light.gdshaderinc"
 
-// COLOR is overwritten below, which would drop the node's modulate.
-varying vec4 modulate;
-
-void vertex() {
-	modulate = COLOR;
-}
-
 void fragment() {
 	vec4 c = texture(TEXTURE, UV);
 	if (c.g < 0.1) {

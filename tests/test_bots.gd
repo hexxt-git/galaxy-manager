@@ -37,6 +37,12 @@ func _room_rect(name: String) -> Rect2:
 	return Rect2()
 
 
+func _side_door() -> Rect2:
+	var storage := _room_rect("Storage")
+	var control := _room_rect("Control")
+	return Rect2(storage.end.x, storage.position.y, control.position.x - storage.end.x, storage.size.y)
+
+
 func _point_in(rect: Rect2, rng: RandomNumberGenerator) -> Vector2:
 	while true:
 		var p := nav.random_point(rng)
@@ -72,9 +78,8 @@ func _run() -> void:
 	var storage := _room_rect("Storage")
 	var control := _room_rect("Control")
 	var cafe := _room_rect("Cafeteria")
-	var side_door := Rect2(storage.end.x, storage.position.y, control.position.x - storage.end.x, storage.size.y)
 	var p := nav.find_path(_point_in(storage, RandomNumberGenerator.new()), _point_in(control, RandomNumberGenerator.new()))
-	_check(_crosses(p, side_door), "storage -> control path takes the side door")
+	_check(_crosses(p, _side_door()), "storage -> control path takes the side door")
 
 	var lone = bots[0]
 	lone.global_position = _point_in(storage, RandomNumberGenerator.new())
@@ -117,8 +122,7 @@ func _soak(name: String, seconds: float, spec: Dictionary) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(name)
 	var forced := not spec.is_empty()
-	var side_door: Rect2 = Rect2(_room_rect("Storage").end.x, _room_rect("Storage").position.y,
-		_room_rect("Control").position.x - _room_rect("Storage").end.x, _room_rect("Storage").size.y)
+	var side_door := _side_door()
 	var stat := []
 	for i in bots.size():
 		var b = bots[i]

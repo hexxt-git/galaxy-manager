@@ -38,7 +38,9 @@ func _on_area_exited(area: Area2D) -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	_candidates = _candidates.filter(func(c): return is_instance_valid(c) and c.is_inside_tree())
+	for i in range(_candidates.size() - 1, -1, -1):
+		if not is_instance_valid(_candidates[i]) or not _candidates[i].is_inside_tree():
+			_candidates.remove_at(i)
 	if locked:
 		return
 	var best: Interactable = null
