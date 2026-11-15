@@ -21,6 +21,9 @@ run/main_scene="res://scenes/menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.png"
 boot_splash/bg_color=Color(0.114, 0.157, 0.275, 1)
+boot_splash/image="res://assets/art/splash.png"
+boot_splash/fullsize=false
+boot_splash/use_filter=false
 
 [display]
 

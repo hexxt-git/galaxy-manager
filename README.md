@@ -43,12 +43,12 @@ Crewmates come with a role (Miner, Farmer, Technician, Geologist) and a perk (Qu
 
 | | |
 |---|---|
-| ![Tutorial](docs/screenshots/tutorial.png) | ![Base with crew](docs/screenshots/base.png) |
-| The commander's log starts the tutorial | The hab with the crew at work |
-| ![Solar field](docs/screenshots/outside.png) | ![Minigame](docs/screenshots/minigame.png) |
-| The solar field on the surface | Wiping regolith off a panel |
-| ![Upgrade cards](docs/screenshots/upgrades.png) | |
-| Spending research on upgrades | |
+| ![Tutorial](docs/screenshots/tutorial.png) | ![The hab](docs/screenshots/base.png) |
+| The commander's log starts the tutorial | The hab, with the whole crew at work |
+| ![Greenhouse](docs/screenshots/greenhouse.png) | ![Ice drill minigame](docs/screenshots/minigame.png) |
+| Tending potatoes in the greenhouse | Drilling ice: let go before it overheats |
+| ![Upgrade cards](docs/screenshots/upgrades.png) | ![Map](docs/screenshots/map.png) |
+| Spending research on upgrades | The base map: hab, greenhouse, life support, lab and the crater |
 
 ## Controls
 

@@ -72,6 +72,8 @@ jobs:
 
       - name: Export Web build
         run: |
+          # keep the engine source and template out of the game's resources
+          for d in godot-src template; do [ -d $d ] && touch $d/.gdignore; done
           sed -i "s#^\[preset.0.options\]#[preset.0.options]\ncustom_template/release=\"$PWD/template/web_release.zip\"#" export_presets.cfg
           mkdir -p build/web
           godot --headless --import --path . || true
