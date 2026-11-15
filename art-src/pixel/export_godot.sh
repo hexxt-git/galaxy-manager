@@ -17,6 +17,7 @@ for name, u in re.findall(r'(\w+) data:image/png;base64,([A-Za-z0-9+/=]+)', dom)
 print(re.search(r'origin [\d.]+ [\d.]+', dom).group())
 PY
 rm "$S/strip.dom"
+"$S/../.venv/bin/python" -I "$S/character_key.py" "$S/character_sprite.png" "$P/character/character.png"
 "$S/../.venv/bin/python" -I "$S/character_shadow.py" "$P/character/shadow.png"
 "$S/../.venv/bin/python" -I "$S/floor.py" "$P/floor_tile.png"
 "$S/../.venv/bin/python" -I "$S/room_floors.py" "$P/floors"

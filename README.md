@@ -96,7 +96,7 @@ tests/           headless checks and the balance simulation
 design.md        art style rules
 ```
 
-All the art is drawn in code. `art-src/` holds the vector sources, and `art-src/pixel/export_godot.sh` renders them to the PNGs in `assets/art/`. See `art-src/README.md` and `design.md`.
+The props, floors and UI are drawn in code: `art-src/` holds the vector sources, and `art-src/pixel/export_godot.sh` renders them to the PNGs in `assets/art/`. The crewmate is a hand-cleaned pixel sprite (`art-src/pixel/character_sprite.png`), keyed for recolouring by `character_key.py`. `art-src/pixel/brand_art.py` builds the app icon, boot splash, HUD crew icon and the web preview image (`docs/og-image.png`) from it. See `art-src/README.md` and `design.md`.
 
 ## Credits
 

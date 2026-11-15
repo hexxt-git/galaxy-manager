@@ -19,10 +19,10 @@ script = ExtResource("1_bot")
 
 [node name="Sprite" type="Sprite2D" parent="."]
 material = SubResource("ShaderMaterial_character")
-scale = Vector2(1.8, 1.8)
+scale = Vector2(1.2, 1.2)
 texture = ExtResource("2_character")
 centered = false
-offset = Vector2(-34, -69)
+offset = Vector2(-34, -96)
 
 [node name="Feet" type="CollisionShape2D" parent="."]
 position = Vector2(0, -12)

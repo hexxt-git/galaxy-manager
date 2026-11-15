@@ -16,6 +16,7 @@ const TREND_WINDOW := 10.0  # seconds the per-minute trend is measured over
 const RUNOUT := 60.0  # a stock that would empty within this many seconds counts as low
 const UI := "res://assets/art/ui/"
 const UI_SCALE := 2  # same as the USE button
+const HEAD_ROWS := 22  # sprite px of the character kept for head-only portraits
 const TILED := ["chip", "card", "card_hover", "card_window"]  # wobbly edges: tiled, since stretching would smear the wobble
 const ICONS := {"o2": "icon_o2", "water": "icon_water", "food": "icon_food", "power": "icon_power",
 	"research": "icon_research", "crew": "icon_crew"}
@@ -30,6 +31,8 @@ static func portrait(colour: String, head := false, k := UI_SCALE) -> Texture2D:
 	if not _portraits.has(key):
 		var img := ColonyMap.texture("res://assets/art/character/character.png").get_image()
 		img.convert(Image.FORMAT_RGBA8)
+		# character.png is stored at 2x; each sprite px stands for ~1.5 art px of the UI
+		img.resize(img.get_width() / 2, img.get_height() / 2, Image.INTERPOLATE_NEAREST)
 		var tones: Array = CREWMATE.COLOURS[colour]
 		for y in img.get_height():
 			for x in img.get_width():
@@ -39,8 +42,9 @@ static func portrait(colour: String, head := false, k := UI_SCALE) -> Texture2D:
 				elif c.a > 0.0 and c.r8 == 0 and c.g8 == 0 and c.b8 == 255:
 					img.set_pixel(x, y, Color(tones[1], c.a))
 		if head:
-			img = img.get_region(Rect2i(0, 0, img.get_width(), 44))
-		img.resize(img.get_width() * k, img.get_height() * k, Image.INTERPOLATE_NEAREST)
+			img = img.get_region(Rect2i(0, 0, img.get_width(), HEAD_ROWS))
+		var s := maxi(1, roundi(k * 1.5))
+		img.resize(img.get_width() * s, img.get_height() * s, Image.INTERPOLATE_NEAREST)
 		_portraits[key] = ImageTexture.create_from_image(img)
 	return _portraits[key]
 

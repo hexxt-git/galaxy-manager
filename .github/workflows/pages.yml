@@ -80,6 +80,7 @@ jobs:
           godot --headless --import --path . || true
           godot --headless --path . --export-release "Web" build/web/index.html
           test -f build/web/index.html
+          cp docs/og-image.png build/web/
           ls -la build/web
 
       - uses: actions/upload-pages-artifact@v3

@@ -13,3 +13,4 @@ art-src/.venv/
 art-src/**/*.dom
 
 /build/
+!art-src/pixel/character_sprite.png

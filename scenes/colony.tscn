@@ -61,10 +61,10 @@ joystick = NodePath("../../HUD/Joystick")
 
 [node name="Sprite" type="Sprite2D" parent="World/Player"]
 material = SubResource("ShaderMaterial_character")
-scale = Vector2(1.8, 1.8)
+scale = Vector2(1.2, 1.2)
 texture = ExtResource("5_character")
 centered = false
-offset = Vector2(-34, -69)
+offset = Vector2(-34, -96)
 
 [node name="Feet" type="CollisionShape2D" parent="World/Player"]
 position = Vector2(0, -12)

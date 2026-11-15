@@ -2,7 +2,9 @@
 
 Sources for the pixel art in `assets/art/`. Shapes are drawn as round-brush canvas paths, then rendered at native pixel size with a fixed palette (`pixel/pixelate.js`). Floors are drawn directly in Python.
 
-- `character.html` — character geometry; `pixel/build.py` copies it into `pixel/character.js`. Only the idle frame is exported; the game animates it with a hop.
+- `pixel/character_sprite.png` — the crewmate: a 34×49 hand-cleaned pixel sprite facing left, lit suit `#E42624`, suit shadow `#9C1730`. `pixel/character_key.py` mirrors it, swaps those two tones for the recolour keys and writes `assets/art/character/character.png` at 2×. The game animates it with a hop.
+- `pixel/brand_art.py` — app icon, boot splash, HUD crew icon and `docs/og-image.png`, built from the sprite and the menu art.
+- `character.html` — the old vector character, kept for reference; no longer exported.
 - `props/<name>.js` — one prop each (some register several, e.g. wall pieces), sharing `props/prop.js`. Preview with `props/view.html?crate,bench`. Every prop file is exported automatically.
 - `workstation.html` — the workstation sprite, exported by `pixel/export_workstation.sh`.
 - `pixel/floor.py`, `pixel/room_floors.py`, `pixel/floor_decals.py` — the cafeteria floor tile, the other room floors, and the scattered floor details.

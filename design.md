@@ -82,7 +82,7 @@ The body uses two key colours in `character.png`: pure red `#ff0000` for lit and
 
 - A chunky, big-bodied bean with a short pair of legs, a backpack on the back and a wide visor. It faces right. The idle pose is the only exported frame.
 - Motion is done in code, not frames: a hop (`HOP 6`), lean and sway at about 5.6 steps per second.
-- The character is the scale reference for everything else: about 68×72 px. A crate is roughly one character wide, a locker about 1.3× as tall, and a table seats several.
+- The character is the scale reference for everything else: the 34×49 sprite, stored at 2× (68×98) and drawn at scale 1.2. A crate is roughly one character wide, a locker about 1.3× as tall, and a table seats several.
 
 ## Floors
 
