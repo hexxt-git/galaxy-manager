@@ -9,6 +9,10 @@ A NASA Space Apps Challenge entry for <i>Build a Junior Astronaut Mission Traine
 
 <p align="center"><img src="docs/screenshots/menu.png" width="720" alt="Title screen"></p>
 
+## Team
+
+- Salah Zeghdani
+
 ## The challenge
 
 > Space-themed STEM content often oversimplifies the engineering trade-offs that define a real mission, or presents them at a level too complex to hold a young learner's attention. Design and build an interactive game or app that lets students run a lunar or Martian outpost, balancing competing demands like life support, radiation shielding, power, and food production, so they experience firsthand the decisions that determine whether a mission fails or succeeds.
@@ -96,6 +100,7 @@ All the art is drawn in code. `art-src/` holds the vector sources, and `art-src/
 
 ## Credits
 
+- The art style is heavily inspired by Among Us. Moon Crew is a hackathon entry only and is not affiliated with or endorsed by Innersloth.
 - Built for the [NASA Space Apps Challenge](https://www.spaceappschallenge.org/).
 - Font: [Fredoka](https://fonts.google.com/specimen/Fredoka), SIL Open Font License (`assets/fonts/OFL.txt`).
 - Made with [Godot Engine](https://godotengine.org/).
