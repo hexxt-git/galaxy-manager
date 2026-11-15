@@ -16,6 +16,16 @@ concurrency:
 
 env:
   GODOT_VERSION: 4.7.2
+  EM_VERSION: 4.0.11
+  # Slim web engine: 2D only, size-optimized, just the modules the game uses.
+  # Bump TEMPLATE_REV after changing these so the cached template gets rebuilt.
+  TEMPLATE_REV: 1
+  SCONS_FLAGS: >-
+    platform=web target=template_release threads=no production=yes optimize=size_extra
+    disable_3d=yes disable_advanced_gui=yes deprecated=no
+    modules_enabled_by_default=no
+    module_gdscript_enabled=yes module_freetype_enabled=yes module_text_server_fb_enabled=yes
+    module_godot_physics_2d_enabled=yes module_noise_enabled=yes module_svg_enabled=yes
 
 jobs:
   build:
@@ -23,24 +33,51 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Godot and export templates
+      - name: Cache slim web template
+        id: template
+        uses: actions/cache@v4
+        with:
+          path: template/web_release.zip
+          key: web-template-${{ env.GODOT_VERSION }}-${{ env.EM_VERSION }}-${{ env.TEMPLATE_REV }}
+
+      - name: Check out Godot source
+        if: steps.template.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_VERSION }}-stable
+          path: godot-src
+
+      - name: Set up Emscripten
+        if: steps.template.outputs.cache-hit != 'true'
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: ${{ env.EM_VERSION }}
+
+      - name: Build slim web template
+        if: steps.template.outputs.cache-hit != 'true'
+        run: |
+          pip install scons
+          cd godot-src
+          scons $SCONS_FLAGS -j$(nproc)
+          mkdir -p ../template
+          cp bin/godot.web.template_release.wasm32.nothreads.zip ../template/web_release.zip
+
+      - name: Install Godot
         run: |
           base=https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable
           wget -q $base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
-          wget -q $base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz
           unzip -q Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
           mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
-          dir=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-          mkdir -p $dir
-          unzip -q Godot_v${GODOT_VERSION}-stable_export_templates.tpz
-          mv templates/* $dir/
 
       - name: Export Web build
         run: |
+          sed -i "s#^\[preset.0.options\]#[preset.0.options]\ncustom_template/release=\"$PWD/template/web_release.zip\"#" export_presets.cfg
           mkdir -p build/web
           godot --headless --import --path . || true
           godot --headless --path . --export-release "Web" build/web/index.html
           test -f build/web/index.html
+          ls -la build/web
 
       - uses: actions/upload-pages-artifact@v3
         with:
