@@ -1,8 +1,9 @@
 extends SceneTree
 
 ## Balance sim: a ghost commander (a helper that always does the most-needed task) plays the colony while cards are
-## picked at random. Prints stocks every game minute and the arrival times. Needs --fixed-fps to run faster than real time:
-## godot --headless --fixed-fps 60 --path . -s res://tests/sim_balance.gd
+## picked like a sensible player would. Prints stocks every game minute and the arrival times. Needs --fixed-fps to run faster than real time:
+## godot --headless --fixed-fps 30 --path . -s res://tests/sim_balance.gd
+## Stops at the win; pass `-- --after-win` to keep playing to 40 minutes.
 
 var main: Node
 var colony: Colony
@@ -11,10 +12,23 @@ var pending := []
 func _initialize() -> void:
 	_run.call_deferred()
 
+const PREFER := ["bed", "panel", "bed_x", "reactor", "panel_x", "bit", "automation", "lab_x", "training", "recycler", "boots", "coating"]
+const PREFER_CREW := ["harvest", "ice", "rocks", "solar", "shield"]
+
+
+## Picks like a sensible player: what grows food and power first.
 func _offer(kind: String, cards: Array) -> void:
-	pending = [kind, cards.pick_random(), colony.time + 4.0]
+	var order: Array = PREFER if kind == "upgrade" else PREFER_CREW
+	var key := "id" if kind == "upgrade" else "role"
+	var best: Dictionary = cards[0]
+	for c in cards:
+		if order.find(c[key]) < order.find(best[key]):
+			best = c
+	pending = [kind, best, colony.time + 4.0]
 
 func _run() -> void:
+	Engine.physics_ticks_per_second = 30
+	var after_win := "--after-win" in OS.get_cmdline_user_args()
 	main = load("res://scenes/colony.tscn").instantiate()
 	root.add_child(main)
 	for i in 6:
@@ -36,7 +50,7 @@ func _run() -> void:
 	var next_print := 0.0
 	var call_at := -1.0
 	var won_at := -1.0
-	while colony.time < 2400.0 and colony.crew.size() < Colony.MAX_CREW:
+	while colony.time < 2400.0 and colony.crew.size() < Colony.MAX_CREW and (after_win or not colony.finished):
 		if colony.finished and won_at < 0.0:
 			won_at = colony.time
 			paused = false
@@ -69,5 +83,7 @@ func _run() -> void:
 				int(colony.time / 60), colony.crew.size(), r.o2, r.water, r.food, r.research, r.shield, colony.shield_need(),
 				colony.crew_cost(), colony.upgrade_cost(), colony.power.x, colony.power.y, colony.stations_of("bed").size(), colony.levels])
 	print("arrivals ", arrivals)
+	if won_at < 0.0 and colony.finished:
+		won_at = colony.time
 	print("won at %.0f s, ended %.0f s" % [won_at, colony.time], " stats ", colony.stats)
 	quit()

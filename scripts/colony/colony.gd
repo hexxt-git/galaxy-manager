@@ -44,8 +44,8 @@ const CREW_DEMAND := 0.25
 const BED_DEMAND := 0.75
 const ROCKS_PER_DIG := 3
 const LAB_WATER := 1.0  # water used to prep each rock
-const LAB_POWER := 3.0  # extra power the lab draws while it works
-const SPLIT_POWER := 3.0  # extra power the electrolyzer draws while it works
+const LAB_POWER := 1.0  # extra power the lab draws while it works
+const SPLIT_POWER := 1.0  # extra power the electrolyzer draws while it works
 const LAB_BUSY := 10.0  # seconds the lab keeps drawing power after an analysis
 const SCAN_HITS := 3  # the player's scan is this many hits, whatever the rock count
 const BAGS_PER_DIG := 2
@@ -378,15 +378,22 @@ func _upgrade_cards() -> Array:
 	var open: Array = UPGRADES.keys().filter(_can_take)
 	open.shuffle()
 	# what the base is short of goes first, so a needed upgrade is always on offer
-	var urgent := []
+	# one card for each thing the base is short of comes first
+	var needs := []
 	if power.x < power.y * 1.1:
-		urgent += ["panel", "reactor", "panel_x"]
-	elif res.water >= 5.0:
-		urgent += ["bed", "bed_x"]
+		needs.append(["panel", "reactor", "panel_x", "coating"])
+	if res.water < 10.0:
+		needs.append(["bit", "recycler"])
+	needs.append(["bed", "bed_x", "automation"])
+	var urgent := []
+	for group in needs:
+		for id in group:
+			if id in open and id not in urgent:
+				urgent.append(id)
+				break
 	for id in urgent:
-		if id in open:
-			open.erase(id)
-			open.push_front(id)
+		open.erase(id)
+	open = urgent + open
 	open = open.slice(0, CARDS)
 	open.shuffle()
 	return open.map(func(id: String) -> Dictionary:
