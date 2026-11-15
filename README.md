@@ -68,7 +68,7 @@ Moon Crew is built with **Godot 4.7** (GL Compatibility renderer), so it runs on
 2. Clone this repo and open `project.godot` in Godot.
 3. Press **F5** to play.
 
-**Web build:** every push to `main` builds and deploys to [GitHub Pages](https://hexxt-git.github.io/moon-crew/) (`.github/workflows/pages.yml`). To build locally, use *Project → Export → Web*, writes `build/web/index.html`. Serve that folder with any static server, for example `python3 -m http.server -d build/web`.
+**Web build:** every push to `main` builds and deploys to [GitHub Pages](https://hexxt-git.github.io/moon-crew/) (`.github/workflows/pages.yml`). To build locally, use *Project → Export → Web*, which writes `build/web/index.html`. Serve that folder with any static server, for example `python3 -m http.server -d build/web`.
 
 ### Tests
 
