@@ -223,7 +223,7 @@ func work_speed() -> float:
 func destinations(item: String) -> Array:
 	var out := []
 	for kind in DESTINATIONS.get(item, []):
-		if not is_locked(kind):
+		if not is_locked(kind) and (only.is_empty() or kind in only):
 			out += stations_of(kind)
 	return out
 

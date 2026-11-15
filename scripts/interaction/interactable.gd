@@ -24,7 +24,7 @@ func _ready() -> void:
 
 
 func can_interact() -> bool:
-	return enabled and is_inside_tree()
+	return enabled and is_inside_tree() and not is_queued_for_deletion()
 
 
 func set_highlighted(on: bool) -> void:

@@ -45,7 +45,7 @@ func _nearest(nodes: Array) -> Node2D:
 func _draw() -> void:
 	if colony == null:
 		return
-	var focus := detector.focus
+	var focus := detector.focus if is_instance_valid(detector.focus) else null
 	if focus:
 		var at: Vector2 = focus.get_parent().global_position
 		var ring := _ring_blocked if blocked else _ring

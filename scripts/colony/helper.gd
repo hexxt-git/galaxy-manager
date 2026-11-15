@@ -168,6 +168,8 @@ func _try(task: String) -> String:
 			if _use_nearest("solar", func(s: Station) -> bool: return s.state.dust > DIRTY):
 				return "wiping panels"
 		"rocks":
+			if colony.destinations("sample").is_empty():
+				return ""
 			if _pick_up("sample"):
 				return "fetching a rock"
 			if _use_nearest("outcrop"):

@@ -176,7 +176,7 @@ func _brief(i: int) -> void:
 	colony.only = STEPS.slice(0, i + 1).map(func(s: Array) -> String: return s[1])  # the next machine opens as it's explained
 	_talking = true
 	_pulse_use(false)
-	var target: Node2D = guide.target
+	var target: Node2D = guide.target if is_instance_valid(guide.target) else null
 	var cam: Camera2D = main.player.get_node("Camera")
 	_lift_shadows(true)
 	if target:
@@ -212,8 +212,8 @@ func _glance(cam: Camera2D, offset: Vector2, time: float) -> void:
 ## The USE button bounces while the player stands at the thing to use.
 func _pulse_use(on := true) -> void:
 	var btn: Control = main.use_button
-	var focus: Interactable = main.detector.focus
-	on = on and is_instance_valid(focus) and is_instance_valid(guide.target) and focus.get_parent() == guide.target and not guide.blocked
+	var focus: Interactable = main.detector.focus if is_instance_valid(main.detector.focus) else null
+	on = on and focus != null and is_instance_valid(guide.target) and focus.get_parent() == guide.target and not guide.blocked
 	if _use_pos == Vector2.INF:
 		_use_pos = btn.position
 	var k := 1.0 + USE_PULSE * absf(sin(_t * 7.0)) if on else 1.0
@@ -285,8 +285,8 @@ func _point() -> void:
 	guide.target = node
 	guide.target_tag = t[1]
 	guide.target_label = t[2] if t.size() > 2 else (node.title if node is Station else "")
-	var focus: Interactable = main.detector.focus
-	if node == null or main.nav == null or is_instance_valid(focus) and focus.get_parent() == node:
+	var focus: Interactable = main.detector.focus if is_instance_valid(main.detector.focus) else null
+	if node == null or main.nav == null or focus != null and focus.get_parent() == node:
 		guide.trail = PackedVector2Array()
 		_goal = Vector2i(-1, -1)
 		return

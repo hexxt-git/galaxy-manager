@@ -328,7 +328,7 @@ func _process(delta: float) -> void:
 	_message_t -= delta
 	_message.visible = _message_t > 0.0
 	_drop.visible = hands and not hands.is_empty()
-	var focus := detector.focus if detector else null
+	var focus := detector.focus if detector and is_instance_valid(detector.focus) else null
 	if focus == null:
 		_prompt.text = ""
 	elif blocked != "":

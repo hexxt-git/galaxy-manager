@@ -35,9 +35,13 @@ func _on_area_entered(area: Area2D) -> void:
 
 func _on_area_exited(area: Area2D) -> void:
 	_candidates.erase(area)
+	if is_instance_valid(focus) and area == focus:
+		_set_focus(null)
 
 
 func _physics_process(_delta: float) -> void:
+	if not is_instance_valid(focus):
+		focus = null
 	for i in range(_candidates.size() - 1, -1, -1):
 		if not is_instance_valid(_candidates[i]) or not _candidates[i].is_inside_tree():
 			_candidates.remove_at(i)
@@ -58,14 +62,24 @@ func _physics_process(_delta: float) -> void:
 
 
 func _set_focus(target: Interactable) -> void:
+	if not is_instance_valid(focus):
+		focus = null
 	if target == focus:
 		return
-	if is_instance_valid(focus):
+	if focus:
+		if focus.tree_exiting.is_connected(_on_focus_exiting):
+			focus.tree_exiting.disconnect(_on_focus_exiting)
 		focus.set_highlighted(false)
 	focus = target
 	if focus:
+		focus.tree_exiting.connect(_on_focus_exiting)
 		focus.set_highlighted(true)
 	focus_changed.emit(focus)
+
+
+func _on_focus_exiting() -> void:
+	_candidates.erase(focus)
+	_set_focus(null)
 
 
 func try_interact() -> bool:
