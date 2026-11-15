@@ -42,6 +42,8 @@ var colour := "red":
 
 @onready var sprite: Sprite2D = $Sprite
 
+var speed_scale := 1.0
+
 var _step := 0.0
 var _light := Vector2(-1, -1)  # room light, ground shadow opacity
 var _shadow: Sprite2D

@@ -71,5 +71,5 @@ func _set_focus(target: Interactable) -> void:
 func try_interact() -> bool:
 	if locked or not is_instance_valid(focus) or not focus.can_interact():
 		return false
-	focus.interact(owner if owner else get_parent())
+	focus.interact(get_parent())
 	return true

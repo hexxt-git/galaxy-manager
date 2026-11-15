@@ -64,7 +64,7 @@ func _physics_process(delta: float) -> void:
 # Spends this tick's travel along the path, so speed stays exact through waypoints and it never overshoots.
 func _follow(delta: float) -> Vector2:
 	var pos := global_position
-	var budget := SPEED * delta
+	var budget := SPEED * speed_scale * delta
 	while _idx < _path.size():
 		var d := pos.distance_to(_path[_idx])
 		if d > budget:
@@ -76,7 +76,7 @@ func _follow(delta: float) -> Vector2:
 	velocity = (pos - global_position) / delta
 	if not has_path():
 		_arrive()
-	return velocity / SPEED
+	return velocity / (SPEED * speed_scale)
 
 
 func _arrive() -> void:
@@ -100,7 +100,7 @@ func _check_stuck(delta: float) -> void:
 	var moved := global_position.distance_to(_window_from)
 	_window_from = global_position
 	_window_t = 0.0
-	if moved >= SPEED * STUCK_WINDOW * STUCK_RATIO:
+	if moved >= SPEED * speed_scale * STUCK_WINDOW * STUCK_RATIO:
 		_strikes = 0
 		return
 	recoveries += 1

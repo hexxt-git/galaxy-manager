@@ -1,0 +1,225 @@
+[gd_scene load_steps=26 format=3]
+
+[ext_resource type="Script" path="res://scripts/colony/colony_main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/colony/colony.gd" id="2_colony"]
+[ext_resource type="Script" path="res://scripts/colony/colony_map.gd" id="3_map"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="4_player"]
+[ext_resource type="Texture2D" path="res://assets/art/character/character.png" id="5_character"]
+[ext_resource type="Shader" path="res://assets/art/character/character_recolor.gdshader" id="6_recolor"]
+[ext_resource type="Script" path="res://scripts/interaction/interaction_detector.gd" id="7_detector"]
+[ext_resource type="Script" path="res://scripts/colony/hands.gd" id="8_hands"]
+[ext_resource type="Script" path="res://scripts/colony/guide.gd" id="9_guide"]
+[ext_resource type="Script" path="res://scripts/joystick.gd" id="10_joy"]
+[ext_resource type="Script" path="res://scripts/ui/use_button.gd" id="11_use"]
+[ext_resource type="Texture2D" path="res://assets/art/ui/use_button.png" id="12_use_n"]
+[ext_resource type="Texture2D" path="res://assets/art/ui/use_button_pressed.png" id="13_use_p"]
+[ext_resource type="Texture2D" path="res://assets/art/ui/use_button_disabled.png" id="14_use_d"]
+[ext_resource type="Script" path="res://scripts/ui/task_panel.gd" id="15_panel"]
+[ext_resource type="Texture2D" path="res://assets/art/ui/panel.png" id="16_panel_tex"]
+[ext_resource type="Texture2D" path="res://assets/art/ui/close_button.png" id="17_close"]
+[ext_resource type="Script" path="res://scripts/colony/hud.gd" id="18_hud"]
+[ext_resource type="Script" path="res://scripts/colony/picker.gd" id="19_picker"]
+[ext_resource type="Script" path="res://scripts/colony/minimap.gd" id="20_minimap"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_character"]
+resource_local_to_scene = true
+shader = ExtResource("6_recolor")
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_feet"]
+radius = 16.0
+height = 84.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_reach"]
+radius = 60.0
+
+[sub_resource type="Gradient" id="Gradient_helmet"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_helmet"]
+gradient = SubResource("Gradient_helmet")
+width = 256
+height = 256
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
+font_size = 11
+font_color = Color(0.051, 0.051, 0.071, 1)
+
+[node name="Colony" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Colony" type="Node" parent="."]
+script = ExtResource("2_colony")
+
+[node name="Shade" type="CanvasModulate" parent="."]
+
+[node name="World" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Map" type="Node2D" parent="World"]
+script = ExtResource("3_map")
+
+[node name="Items" type="Node2D" parent="World"]
+y_sort_enabled = true
+
+[node name="Helpers" type="Node2D" parent="World"]
+y_sort_enabled = true
+
+[node name="Player" type="CharacterBody2D" parent="World" node_paths=PackedStringArray("joystick")]
+motion_mode = 1
+script = ExtResource("4_player")
+joystick = NodePath("../../HUD/Joystick")
+
+[node name="Sprite" type="Sprite2D" parent="World/Player"]
+material = SubResource("ShaderMaterial_character")
+scale = Vector2(1.8, 1.8)
+texture = ExtResource("5_character")
+centered = false
+offset = Vector2(-34, -69)
+
+[node name="Feet" type="CollisionShape2D" parent="World/Player"]
+position = Vector2(0, -12)
+rotation = 1.5707964
+shape = SubResource("CapsuleShape2D_feet")
+
+[node name="InteractionDetector" type="Area2D" parent="World/Player"]
+collision_layer = 0
+collision_mask = 4
+script = ExtResource("7_detector")
+
+[node name="Reach" type="CollisionShape2D" parent="World/Player/InteractionDetector"]
+position = Vector2(0, -12)
+shape = SubResource("CircleShape2D_reach")
+
+[node name="Hands" type="Node2D" parent="World/Player"]
+script = ExtResource("8_hands")
+
+[node name="Helmet" type="PointLight2D" parent="World/Player"]
+position = Vector2(0, -40)
+enabled = false
+energy = 1.4
+texture = SubResource("GradientTexture2D_helmet")
+texture_scale = 3.0
+
+[node name="Camera" type="Camera2D" parent="World/Player"]
+position = Vector2(0, -75)
+zoom = Vector2(0.8, 0.8)
+
+[node name="Guide" type="Node2D" parent="World"]
+z_index = 50
+script = ExtResource("9_guide")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Joystick" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("10_joy")
+
+[node name="Hud" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("18_hud")
+
+[node name="UseButton" type="TextureButton" parent="HUD" node_paths=PackedStringArray("detector") groups=["blocks_joystick"]]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -196.0
+offset_top = -204.0
+offset_right = -120.0
+offset_bottom = -124.0
+scale = Vector2(2, 2)
+texture_normal = ExtResource("12_use_n")
+texture_pressed = ExtResource("13_use_p")
+texture_disabled = ExtResource("14_use_d")
+script = ExtResource("11_use")
+detector = NodePath("../../World/Player/InteractionDetector")
+
+[node name="TaskPanel" type="Control" parent="HUD" groups=["blocks_joystick"]]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("15_panel")
+
+[node name="Dim" type="ColorRect" parent="HUD/TaskPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.45)
+
+[node name="Window" type="NinePatchRect" parent="HUD/TaskPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -420.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 0
+scale = Vector2(2, 2)
+texture = ExtResource("16_panel_tex")
+patch_margin_left = 20
+patch_margin_top = 20
+patch_margin_right = 20
+patch_margin_bottom = 20
+
+[node name="Title" type="Label" parent="HUD/TaskPanel/Window"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 10.0
+offset_top = 3.0
+offset_right = 270.0
+offset_bottom = 17.0
+text = "Task"
+label_settings = SubResource("LabelSettings_title")
+vertical_alignment = 1
+
+[node name="Close" type="TextureButton" parent="HUD/TaskPanel/Window"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 280.0
+offset_top = -8.0
+offset_right = 308.0
+offset_bottom = 20.0
+texture_normal = ExtResource("17_close")
+
+[node name="Minimap" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("20_minimap")
+
+[node name="Picker" type="Control" parent="HUD"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("19_picker")

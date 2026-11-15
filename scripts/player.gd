@@ -30,6 +30,6 @@ func _physics_process(delta: float) -> void:
 		dir = joystick.vector
 	if _busy:
 		dir = Vector2.ZERO
-	velocity = dir * SPEED
+	velocity = dir * SPEED * speed_scale
 	move_and_slide()
 	_animate(dir, delta)
