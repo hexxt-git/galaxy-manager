@@ -6,6 +6,7 @@ const MT_GLYPHS = {
   B: { w: 5.8, s: [MT_R([[0, 5], [0, 0], [3.4, 0], [5.4, 1.2], [5.4, 3.8], [3.4, 5], [0, 5]]),
     MT_R([[0, 5], [3.6, 5], [5.8, 6.2], [5.8, 8.8], [3.6, 10], [0, 10], [0, 5]])] },
   C: { w: 6, s: [MT_R([[6, 1.6], [4.6, 0], [1.6, 0], [0, 2], [0, 8], [1.6, 10], [4.6, 10], [6, 8.4]])] },
+  D: { w: 6, s: [MT_R([[0, 0], [3.4, 0], [5.6, 1.6], [6, 5], [5.6, 8.4], [3.4, 10], [0, 10], [0, 0]])] },
   E: { w: 5.5, s: [[[5.5, 0], [0, 0], [0, 10], [5.5, 10]], [[0, 5], [4.5, 5]]] },
   G: { w: 6.2, s: [MT_R([[6, 1.6], [4.6, 0], [1.6, 0], [0, 2], [0, 8], [1.6, 10], [4.6, 10], [6.2, 8.4], [6.2, 5.6], [3.6, 5.6]])] },
   I: { w: 0, s: [[[0, 0], [0, 10]]] },
@@ -65,7 +66,7 @@ registerTitle('menu_base_online', ['BASE', 'ONLINE']);
 
 // Button labels: plain ink letters, laid over the menu buttons in-engine.
 const MT_LABEL = { size: 1.25, brush: 3.6 };
-for (const text of ['TUTORIAL', 'PLAY', 'QUIT', 'KEEP PLAYING', 'MENU']) {
+for (const text of ['TUTORIAL', 'PLAY', 'QUIT', 'KEEP PLAYING', 'MENU', 'CREDITS']) {
   const L = MT_LABEL, pad = 2, tw = mtWidth(text, L.size, L.brush, MT_GAP);
   const w = Math.ceil(tw + pad * 2), h = Math.ceil(10 * L.size + L.brush + pad * 2);
   registerProp('menu_label_' + text.toLowerCase().replace(' ', '_'), { w, h, ox: 0, oy: 0, pal: () => [INK],

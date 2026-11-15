@@ -19,10 +19,10 @@ env:
   EM_VERSION: 4.0.11
   # Slim web engine: 2D only, size-optimized, just the modules the game uses.
   # Bump TEMPLATE_REV after changing these so the cached template gets rebuilt.
-  TEMPLATE_REV: 1
+  TEMPLATE_REV: 2
   SCONS_FLAGS: >-
     platform=web target=template_release threads=no production=yes optimize=size_extra
-    disable_3d=yes disable_advanced_gui=yes deprecated=no
+    disable_3d=yes disable_advanced_gui=yes
     modules_enabled_by_default=no
     module_gdscript_enabled=yes module_freetype_enabled=yes module_text_server_fb_enabled=yes
     module_godot_physics_2d_enabled=yes module_noise_enabled=yes module_svg_enabled=yes

@@ -258,7 +258,7 @@ func _build_ground() -> void:
 	for y in rows():
 		for x in cols():
 			kinds.append(_ground_of(x, y))
-	var ground := Image.create(cols() * CELL, rows() * CELL, false, Image.FORMAT_RGBA8)
+	var ground := Image.create_empty(cols() * CELL, rows() * CELL, false, Image.FORMAT_RGBA8)
 	var sills := []
 	for f in ["sill_h", "sill_v"]:
 		var t := texture(ART + f + ".png")
@@ -300,7 +300,7 @@ func _build_ground() -> void:
 			ground.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), d[1] - img.get_size() / 2)
 	ground_texture = ImageTexture.create_from_image(ground)
 	var m := EDGE_MARGIN * CELL
-	var full := Image.create(ground.get_width() + 2 * m, ground.get_height() + 2 * m, false, Image.FORMAT_RGBA8)
+	var full := Image.create_empty(ground.get_width() + 2 * m, ground.get_height() + 2 * m, false, Image.FORMAT_RGBA8)
 	full.blit_rect(ground, Rect2i(Vector2i.ZERO, ground.get_size()), Vector2i(m, m))
 	# the map's corner cells too: _ground_of can't tell they're crater
 	for y in range(-EDGE_MARGIN, rows() + EDGE_MARGIN):

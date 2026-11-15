@@ -1,10 +1,11 @@
 extends Control
 
-## Title screen: Tutorial or Play, and Quit where the platform has one.
+## Title screen: Play (starts with the tutorial), Credits, and Quit where the platform has one.
 
 const BUTTON := preload("res://scripts/ui/menu_button.gd")
 const HUD := preload("res://scripts/colony/hud.gd")
 const COLONY := "res://scenes/colony.tscn"
+const CREDITS_URL := "https://hexxt.dev"
 const SKY := Color("1d2846")
 const RAY := Color("23315a")
 const RAYS := 18
@@ -113,12 +114,12 @@ func _ready() -> void:
 	var buttons := VBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 20)
 	_col.add_child(buttons)
-	var tutorial := button("TUTORIAL", true)
-	tutorial.pressed.connect(_start.bind(true))
-	buttons.add_child(tutorial)
-	var play := button("PLAY")
-	play.pressed.connect(_start.bind(false))
+	var play := button("PLAY", true)
+	play.pressed.connect(_start)
 	buttons.add_child(play)
+	var credits := button("CREDITS")
+	credits.pressed.connect(OS.shell_open.bind(CREDITS_URL))
+	buttons.add_child(credits)
 	if OS.get_name() not in ["Android", "iOS", "Web"]:
 		var quit := button("QUIT")
 		quit.pressed.connect(get_tree().quit)
@@ -182,8 +183,8 @@ func _spacer(weight: float) -> Control:
 	return c
 
 
-func _start(tutorial: bool) -> void:
-	Colony.start_tutorial = tutorial
+func _start() -> void:
+	Colony.start_tutorial = true
 	var black := ColorRect.new()
 	black.color = Color(0, 0, 0, 0)
 	black.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
@@ -210,7 +211,7 @@ func _ray_texture(c: Vector2) -> Texture2D:
 	_rays_key = key
 	var w := maxi(1, ceili(size.x / K))
 	var h := maxi(1, ceili(_horizon / K))
-	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	var img := Image.create_empty(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(SKY)
 	var ac := c / K
 	var wedge := TAU / RAYS
