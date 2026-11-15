@@ -42,6 +42,7 @@ func _run() -> void:
 	ghost.role = "rocks"
 	ghost.perk = "steady"
 	ghost.crew_name = "YOU"
+	ghost.greets = false
 	ghost.nav = main.nav
 	ghost.colony = colony
 	ghost.position = main.map.spawn

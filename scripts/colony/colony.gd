@@ -101,16 +101,26 @@ const UNLOCKS := {
 	REACTOR_AT: ["reactor", "Unlocked: the Kilopower reactor. Look for it in the upgrade cards."],
 	OVEN_AT: ["oven", "Unlocked: the ISRU oven in the life support room. It bakes oxygen out of moon rocks, if you can spare them from the lab."],
 }
+# note -> [title, pages]
 const NOTES := {
-	1: "WELCOME, COMMANDER\nYou're alone at Shackleton Base, on the Moon's south pole.\nKeep four things going: ice, potatoes, solar power and research.\nCarry potatoes to the kitchen to recruit crewmates, spend research on buildings and upgrades.\nUSE picks things up, DROP (G) throws them, M shows the map.",
-	2: "POWER\nSolar is free, but moondust keeps cutting what the panels make.\nA small fission reactor (NASA's Kilopower) gives steady power no matter what, and a lunar night lasts about 14 Earth days.",
-	3: "GREENHOUSE\nPlants grow under red and blue LEDs, the colours chlorophyll absorbs best.\nPotatoes are a top space crop: lots of calories in little space. They need water and power.",
-	4: "LIFE SUPPORT\nIce is melted and filtered into water. The electrolyzer then splits water with electricity:\n2 H2O -> 2 H2 + O2\nThat's the oxygen you breathe. Every drop you split is a drop nobody drinks or grows food with.",
-	5: "LAB\nMoon rocks tell us what's here and how to use it. Ilmenite holds oxygen and titanium; dark crater floors hold ice.\nResearch buys buildings and upgrades: pick the one your base needs most.",
-	6: "SOLAR FIELD\nNear the south pole the Sun skims the horizon, so high ground is lit most of the time.\nMoondust is sharp and clings to everything. Dusty panels make less power.",
-	7: "SHACKLETON CRATER\nIts floor hasn't seen sunlight in billions of years: about -230 C.\nThat cold trapped water ice, the most precious thing on the Moon.",
-	8: "KITCHEN\nWater and power flow through pipes and wires, but food has to be carried.\nEvery potato stocked here feeds the crew, and a full pantry is what lets Earth send another crewmate.",
-	9: "ISRU OVEN\nIn-situ resource use: making what you need from what's there.\nMoon rock is about 40% oxygen by mass, locked in minerals like ilmenite. Heat it with hydrogen and out comes water.",
+	1: ["Shackleton Base", ["We're on the rim of Shackleton crater, at the Moon's south pole.",
+		"The rim's peaks get sunlight most of the year: ideal for solar power."]],
+	2: ["Power", ["Solar panels turn light into electricity: the photovoltaic effect.",
+		"A lunar night lasts 14 Earth days. NASA's Kilopower reactor uses fission to bridge it."]],
+	3: ["Greenhouse", ["Photosynthesis: light + water + CO2 -> sugar + O2.",
+		"Chlorophyll absorbs red and blue light best, so grow lamps skip green."]],
+	4: ["Life support", ["Electrolysis splits water with electricity: 2 H2O -> 2 H2 + O2.",
+		"The ISS makes most of its oxygen this exact way."]],
+	5: ["Lab", ["A spectrometer reads the light a mineral gives off to learn what it's made of.",
+		"Ilmenite (FeTiO3) is a moon mineral packed with oxygen."]],
+	6: ["Solar field", ["Regolith is moon dust: sharp glassy grains, never worn smooth by wind or water.",
+		"It carries static charge, so it clings to panels and cuts their power."]],
+	7: ["Shackleton crater", ["The crater floor never sees the Sun. It's colder than -170 C.",
+		"It's a cold trap: water ice has stayed frozen here for billions of years."]],
+	8: ["Kitchen", ["Potatoes give lots of calories for little space and water.",
+		"NASA's Veggie garden has grown crops on the ISS since 2014."]],
+	9: ["ISRU oven", ["ISRU means In-Situ Resource Utilization: using what's already there.",
+		"Moon rock is about 40% oxygen by mass, locked inside minerals."]],
 }
 # kind -> what using it does, shown on the station and in the USE prompt
 const RECIPES := {
@@ -131,15 +141,19 @@ const MAKES := {"drill": "ice", "outcrop": "sample", "bed": "potato"}
 const DESTINATIONS := {"ice": ["melter"], "sample": ["lab", "oven"], "potato": ["kitchen"]}
 # kind -> [minigame mode, fact shown during it]
 const MINIGAMES := {
-	"solar": ["taps", "Wipe the dust! Moondust is electrostatic: it clings to everything."],
-	"drill": ["hold", "Hold to drill. Let go before the bit overheats: warm ice turns straight to vapour in vacuum. Finish without overheating for double ice."],
-	"bed": ["taps", "Tend the potatoes. One plant can feed a person for a day."],
-	"lab": ["timing", "Stop the scan on the green band to identify the mineral's spectral line. No misses and the last hit earns 50% more."],
-	"outcrop": ["taps", "Chip off a sample. Most moon rock is basalt or anorthosite, the bright rock of the highlands."],
-	"electrolyzer": ["hold", "Hold to run current through the water. Bubbles of hydrogen and oxygen come off the two electrodes."],
+	"solar": ["taps", "Regolith is electrostatic: it clings to the panels."],
+	"drill": ["hold", "Let go before it overheats! In vacuum, warm ice sublimates straight to gas."],
+	"bed": ["taps", "Potatoes: the most calories per plant of any crop."],
+	"lab": ["timing", "Stop on green to catch the mineral's spectral line."],
+	"outcrop": ["taps", "Moon rock is mostly basalt (dark seas) or anorthosite (bright highlands)."],
+	"electrolyzer": ["hold", "Electrolysis: 2 H2O -> 2 H2 + O2."],
 }
 
+static var start_tutorial := false  # set by the main menu before loading the colony scene
+
 var res := {"o2": 4.0, "water": 8.0, "food": 3.0, "research": 0.0}
+var hold := false  # tutorial: nothing drains, dust and beds stand still, machines draw no extra power
+var only: Array = []  # tutorial: the station kinds usable right now; empty means all
 var crew: Array[Node] = []
 var time := 0.0
 var power := Vector2.ZERO  # supply, demand
@@ -227,7 +241,7 @@ func tick(delta: float) -> void:
 	if paused:
 		return
 	time += delta
-	var m := delta / 60.0
+	var m := delta / 60.0 if not hold else 0.0
 	for c in crew:
 		var need := 0.5 if c.get_meta("perk", "") == "hardy" else 1.0
 		for k in [["o2", BREATHE], ["water", DRINK * (0.5 if level("recycler") else 1.0)], ["food", EAT]]:
@@ -239,7 +253,8 @@ func tick(delta: float) -> void:
 		supply += REACTOR_POWER * reactors * (1.0 if res.water > 0.0 else 0.5)
 		res.water = maxf(0.0, res.water - REACTOR_WATER * reactors * m)
 	for s in stations_of("solar"):
-		s.state.dust = minf(1.0, s.state.dust + DUST_RATE * pow(0.5, level("coating")) * delta)
+		if not hold:
+			s.state.dust = minf(1.0, s.state.dust + DUST_RATE * pow(0.5, level("coating")) * delta)
 		supply += PANEL_POWER * mult("panel_x") * (1.0 - s.state.dust)
 	var beds := stations_of("bed").size()
 	power = Vector2(supply, BASE_DEMAND + CREW_DEMAND * crew.size() + BED_DEMAND * beds + (LAB_POWER if lab_busy > 0.0 else 0.0) + (SPLIT_POWER if split_busy > 0.0 else 0.0))
@@ -261,13 +276,20 @@ func tick(delta: float) -> void:
 
 
 func _check_offers() -> void:
-	if _offering or time - _last_offer < OFFER_GAP:
+	if hold or _offering or time - _last_offer < OFFER_GAP:
 		return
 	if res.research >= upgrade_cost():
-		var cards := _upgrade_cards()
-		if not cards.is_empty():
-			_offering = true
-			offer.emit("upgrade", cards)
+		offer_upgrade()
+
+
+## Opens the upgrade cards now, if research covers one.
+func offer_upgrade() -> void:
+	if _offering or res.research < upgrade_cost():
+		return
+	var cards := _upgrade_cards()
+	if not cards.is_empty():
+		_offering = true
+		offer.emit("upgrade", cards)
 
 
 func can_call() -> bool:
@@ -400,6 +422,10 @@ func is_locked(kind: String) -> int:
 	return 0
 
 
+func tutorial_gated(s: Station) -> bool:
+	return not only.is_empty() and s.kind != "note" and s.kind not in only
+
+
 ## Whether `s` takes `item` from your hands (or makes more of it); anything else is dropped when you use it.
 func accepts(s: Station, item: String) -> bool:
 	return s.kind in DESTINATIONS.get(item, []) or MAKES.get(s.kind, "") == item
@@ -408,6 +434,8 @@ func accepts(s: Station, item: String) -> bool:
 ## Why `actor` can't use `s` right now, or "" if it can.
 func blocked_reason(s: Station, actor: Node) -> String:
 	var hands: Hands = actor.get_node("Hands")
+	if tutorial_gated(s):
+		return "Not yet: follow the arrow."
 	if is_locked(s.kind):
 		return "Unlocks at %d crew." % is_locked(s.kind)
 	match s.kind:
@@ -491,7 +519,7 @@ func finish(s: Station, actor: Node, bonus := 1.0) -> void:
 			var split := power_ratio()
 			var o := SPLIT_O2 * split * bonus
 			res.water -= SPLIT_WATER
-			split_busy = LAB_BUSY
+			split_busy = LAB_BUSY if not hold else 0.0
 			res.o2 += o
 			bump("split")
 			popup.emit(top, "-%d water  +%s air%s" % [SPLIT_WATER, _num(o), tag])

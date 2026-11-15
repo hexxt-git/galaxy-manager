@@ -8,12 +8,19 @@
 
 config_version=5
 
+[autoload]
+
+QuitKey="*res://scripts/quit_key.gd"
+
 [application]
 
-config/name="Galaxy Manager"
-run/main_scene="res://scenes/colony.tscn"
+config/name="Moon Crew"
+config/description="Run a lunar outpost at Shackleton crater: balance power, water, air and food, grow your crew and research upgrades. A NASA Space Apps Challenge entry (Junior Astronaut Mission Trainer)."
+config/version="1.0.0"
+run/main_scene="res://scenes/menu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://icon.png"
+boot_splash/bg_color=Color(0.114, 0.157, 0.275, 1)
 
 [display]
 
@@ -31,7 +38,7 @@ window/handheld/orientation=1
 
 [gui]
 
-theme/custom_font="res://assets/fonts/Fredoka.ttf"
+theme/custom_font="res://assets/fonts/fredoka_bold.tres"
 
 [input]
 

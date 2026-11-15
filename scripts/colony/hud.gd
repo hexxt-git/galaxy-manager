@@ -16,6 +16,7 @@ const TREND_WINDOW := 10.0  # seconds the per-minute trend is measured over
 const RUNOUT := 60.0  # a stock that would empty within this many seconds counts as low
 const UI := "res://assets/art/ui/"
 const UI_SCALE := 2  # same as the USE button
+const TILED := ["chip", "card", "card_hover", "card_window"]  # wobbly edges: tiled, since stretching would smear the wobble
 const ICONS := {"o2": "icon_o2", "water": "icon_water", "food": "icon_food", "power": "icon_power",
 	"research": "icon_research", "crew": "icon_crew"}
 
@@ -61,6 +62,9 @@ static func nine(name: String, margin: int, pad := Vector4(14, 8, 14, 10)) -> St
 		return StyleBoxEmpty.new()
 	var sb := StyleBoxTexture.new()
 	sb.texture = tex
+	if name in TILED:
+		sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+		sb.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
 	for i in 4:
 		sb.set_texture_margin(i, margin * UI_SCALE)
 	sb.content_margin_left = pad.x
@@ -75,6 +79,7 @@ var hands: Hands
 var detector: InteractionDetector
 var player: Node
 var blocked := ""  # why the focused target can't be used right now
+var goal_text := ""  # replaces the colony's objective line when set
 
 var _chips := {}  # id -> {value, sub, bar}
 var _goal := _label(22, Color("f2c230"))
@@ -215,6 +220,30 @@ func _chip_style(low: bool) -> StyleBox:
 	return _chip_styles[low]
 
 
+## Hides every resource chip (and the crew list) not in `ids`.
+func only_show(ids: Array) -> void:
+	for id in _chips:
+		_chips[id].box.visible = id in ids
+	_crew.visible = "crew" in ids
+
+
+## Shows a hidden chip with a pop, so the eye catches it.
+func reveal(id: String) -> void:
+	if id == "crew":
+		_crew.visible = true
+	var box: Control = _chips[id].box
+	if box.visible:
+		return
+	box.visible = true
+	await get_tree().process_frame
+	box.pivot_offset = box.size * 0.5
+	box.scale = Vector2(1.5, 1.5)
+	box.modulate = Color(1.6, 1.5, 0.8)
+	var tw := box.create_tween().set_parallel().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_property(box, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(box, "modulate", Color.WHITE, 1.2)
+
+
 func show_message(text: String, seconds := MESSAGE_TIME) -> void:
 	_message.text = text
 	_message_t = seconds
@@ -295,7 +324,7 @@ func _process(delta: float) -> void:
 	var goal := Colony.MAX_CREW if colony.finished else Colony.WIN_CREW
 	_show("crew", "%d / %d" % [colony.crew.size(), goal], crew_sub, false, float(colony.crew.size()) / goal)
 
-	_goal.text = "> " + colony.current_objective()[0]
+	_goal.text = "> " + (goal_text if goal_text != "" else colony.current_objective()[0])
 	_message_t -= delta
 	_message.visible = _message_t > 0.0
 	_drop.visible = hands and not hands.is_empty()

@@ -192,13 +192,11 @@ function mgbPip(on) {
 // The big round minigame button (as workstation.html's bigButton) with a pouring watering can instead of a word.
 function mgbButton(pressed) {
   return () => {
-    const S = MGB, k = 1.5, cx = 38 * k, cy = 36 * k, R = 34 * k, dy = pressed ? 4 * k : 0;
+    const S = MGB, k = 1.5, cx = 38 * k, cy = 36 * k, R = 34 * k, dy = 0;
     seed = 611;
-    const lip = shape(mgbEll(cx, cy + 6 * k, R, R, 64), S.btnLip, 0, AMP);
-    path(lip, true); stroke(LINE);
-    const face = shape(mgbEll(cx, cy + dy, R, R, 64), S.btn, 0, AMP);
+    const face = shape(mgbEll(cx, cy + dy, R, R, 64), pressed ? S.btnDark : S.btn, 0, AMP);
     clipTo(face, () => blob([...smooth([[cx + 40 * k, cy + dy - 6 * k], [cx + 18 * k, cy + dy + 22 * k], [cx - 12 * k, cy + dy + 30 * k],
-      [cx - 40 * k, cy + dy + 22 * k]], false, 3), [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], S.btnDark));
+      [cx - 40 * k, cy + dy + 22 * k]], false, 3), [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], pressed ? S.btnLip : S.btnDark));
     path(face, true); stroke(LINE);
     mgbCan(0.45, cx - 8, cy + dy + 6, 1.75)();
     for (const [x, y] of [[cx + 22, cy + dy + 14], [cx + 30, cy + dy + 22], [cx + 21, cy + dy + 28]]) {

@@ -193,12 +193,11 @@ const BTN = { w: 76, h: 80 };
 function roundButton(state, label, icon) {
   const off = state === 'disabled';
   const [face, faceDark, lip, iconFill] = off ? [C.off, C.offDark, C.offLip, C.offIcon] : [C.btn, C.btnDark, C.btnLip, C.white];
-  const cx = 38, cy = 36, R = 34, dy = state === 'pressed' ? 4 : 0;
+  const cx = 38, cy = 36, R = 34, dy = 0, down = state === 'pressed';
   seed = 601;
-  part(circle(cx, cy + 6, R), lip);
-  part(circle(cx, cy + dy, R), face,
+  part(circle(cx, cy + dy, R), down ? faceDark : face,
     [...smooth([[cx + 40, cy + dy - 6], [cx + 18, cy + dy + 22], [cx - 12, cy + dy + 30], [cx - 40, cy + dy + 22]], false, 3),
-      [cx - 40, cy + 60], [cx + 40, cy + 60]], faceDark);
+      [cx - 40, cy + 60], [cx + 40, cy + 60]], down ? lip : faceDark);
   icon(cx, cy + dy - 10, iconFill, off ? C.offDark : C.btnDark, lip);
   letters(label, cx - (label.length * 11 - 4) / 2, cy + dy + 7.5, off ? C.offLip : INK);
 }
@@ -207,17 +206,53 @@ const useButton = state => roundButton(state, 'USE', hand);
 const dropButton = state => roundButton(state, 'DROP', dropIcon);
 const mapButton = state => roundButton(state, 'MAP', mapIcon);
 
-// Pale 9-slice plates in the button family: thin ink outline, flat face, a short lip along the bottom.
-// No wobble, so stretched edges stay straight.
-const CHIP = { size: 32, r: 6, lip: 6, margin: 12 };
-const CARD = { size: 48, r: 8, lip: 7, margin: 16 };
-function plate(spec, face, shade, lipFill) {
-  const { size, r, lip } = spec, e = W / 2;
-  const back = rect(e, e, size - e, size - e, r), front = rect(e, e, size - e, size - e - lip, r);
-  path(back, true); ctx.fillStyle = lipFill; ctx.fill(); stroke(W);
+// Pale 9-slice plates in the button family: thin ink outline, flat face, a shade band along the bottom.
+// The edges wobble by one period across the stretchable middle, so the 9-slice tiles it seamlessly.
+const CHIP = { size: 88, r: 6, margin: 12 };
+const CARD = { size: 112, r: 8, margin: 16 };
+function wobblyRect(spec) {
+  const { size, r, margin: m } = spec, e = W / 2, span = size - 2 * m;
+  const f = (t, k) => 0.9 * (Math.sin(2 * Math.PI * t * k) * 0.7 + Math.sin(2 * Math.PI * t * (k + 1) + Math.PI * k) * 0.3);
+  const pts = [];
+  const corners = rect(e, e, size - e, size - e, r);
+  for (let i = 0; i < corners.length; i++) {
+    const a = corners[i], b = corners[(i + 1) % corners.length];
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * 2));
+    for (let j = 0; j < n; j++) pts.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]);
+  }
+  const inMid = v => v > m && v < size - m;
+  return pts.map(([x, y]) => {
+    if (Math.abs(y - e) < 0.01 && inMid(x)) return [x, y + f((x - m) / span, 1)];
+    if (Math.abs(y - (size - e)) < 0.01 && inMid(x)) return [x, y - f((x - m) / span, 2)];
+    if (Math.abs(x - e) < 0.01 && inMid(y)) return [x + f((y - m) / span, 2), y];
+    if (Math.abs(x - (size - e)) < 0.01 && inMid(y)) return [x - f((y - m) / span, 1), y];
+    return [x, y];
+  });
+}
+function plate(spec, face, shade) {
+  const { size } = spec, front = wobblyRect(spec);
   path(front, true); ctx.fillStyle = face; ctx.fill();
-  clipTo(front, () => blob([[0, size - lip - 6], [size, size - lip - 6], [size, size], [0, size]], shade));
+  clipTo(front, () => blob([[0, size - 9], [size, size - 9], [size, size], [0, size]], shade));
   path(front, true); stroke(W);
+}
+
+// Pill button in the card family, flat; pressed darkens the face.
+const PILL = { size: 32, r: 10, margin: 12 };
+function pill(state) {
+  const [face, shade] = { normal: [C.glow, '#5fc98d'], pressed: ['#5fc98d', C.glowDark], off: [C.off, C.offDark] }[state];
+  const front = wobblyRect(PILL);
+  path(front, true); ctx.fillStyle = face; ctx.fill();
+  clipTo(front, () => blob([[0, PILL.size - 8], [PILL.size, PILL.size - 8], [PILL.size, PILL.size], [0, PILL.size]], shade));
+  path(front, true); stroke(W);
+}
+
+// Dark inset display on a card: a recessed screen with a shadow along its top edge.
+const WIN = { size: 72, r: 6, margin: 10 };
+function cardWindow() {
+  const fr = wobblyRect(WIN);
+  path(fr, true); ctx.fillStyle = C.frame; ctx.fill();
+  clipTo(fr, () => blob([[0, 0], [WIN.size, 0], [WIN.size, 7], [0, 7]], C.frameDark));
+  path(fr, true); stroke(W);
 }
 
 // 9-slice frame: 20 px margins on every side; the header strip and bottom shadow band sit inside the margins.
@@ -237,10 +272,9 @@ function panel() {
 
 function closeButton() {
   seed = 801;
-  part(rect(1.75, 5.75, 26.25, 26.25, 6), C.redDark);
-  part(rect(1.75, 1.75, 26.25, 20.25, 6), C.red);
-  pen([[9.5, 6.5], [18.5, 15.5]], W, C.white, 0);
-  pen([[18.5, 6.5], [9.5, 15.5]], W, C.white, 0);
+  part(rect(1.75, 1.75, 26.25, 26.25, 6), C.red, [[0, 20], [28, 20], [28, 28], [0, 28]], C.redDark);
+  pen([[9.5, 9.5], [18.5, 18.5]], W, C.white, 0);
+  pen([[18.5, 9.5], [9.5, 18.5]], W, C.white, 0);
 }
 
 function screenIcon() {
@@ -333,12 +367,11 @@ const MG_FACES = {
 };
 function bigButton(state, label) {
   const k = MG.k, [face, faceDark, lip, ink] = MG_FACES[state === 'pressed' ? 'normal' : state];
-  const cx = 38 * k, cy = 36 * k, R = 34 * k, dy = state === 'pressed' ? 4 * k : 0;
+  const cx = 38 * k, cy = 36 * k, R = 34 * k, dy = 0, down = state === 'pressed';
   seed = 611;
-  part(circle(cx, cy + 6 * k, R, 64), lip);
-  part(circle(cx, cy + dy, R, 64), face,
+  part(circle(cx, cy + dy, R, 64), down ? faceDark : face,
     [...smooth([[cx + 40 * k, cy + dy - 6 * k], [cx + 18 * k, cy + dy + 22 * k], [cx - 12 * k, cy + dy + 30 * k], [cx - 40 * k, cy + dy + 22 * k]], false, 3),
-      [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], faceDark);
+      [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], down ? lip : faceDark);
   if (label) {
     const lk = 1.4;
     letters(label, cx - (label.length * 11 - 4) * lk / 2, cy + dy - 6 * lk - 4, ink, lk);
@@ -397,7 +430,6 @@ function joyBase() {
 function joyKnob() {
   seed = 1111;
   const cx = 14, cy = 13, R = 10.5;
-  part(circle(cx, cy + 2.5, R, 32), C.btnLip);
   part(circle(cx, cy, R, 32), C.btn,
     [...smooth([[cx + 13, cy - 2], [cx + 6, cy + 7], [cx - 4, cy + 9], [cx - 13, cy + 7]], false, 3), [cx - 13, cy + 20], [cx + 13, cy + 20]], C.btnDark);
 }
@@ -422,9 +454,13 @@ const SPRITES = [
     pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => mapButton('normal') },
   { name: 'ui/map_button_pressed', w: BTN.w, h: BTN.h,
     pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => mapButton('pressed') },
-  { name: 'ui/chip', w: CHIP.size, h: CHIP.size, pal: [INK, C.btn, C.btnDark], draw: () => plate(CHIP, C.btn, C.btnDark, C.btnDark) },
-  { name: 'ui/card', w: CARD.size, h: CARD.size, pal: [INK, C.btn, C.btnDark], draw: () => plate(CARD, C.btn, C.btnDark, C.btnDark) },
-  { name: 'ui/card_hover', w: CARD.size, h: CARD.size, pal: [INK, C.white, C.btn, C.btnDark], draw: () => plate(CARD, C.white, C.btn, C.btnDark) },
+  { name: 'ui/chip', w: CHIP.size, h: CHIP.size, pal: [INK, C.btn, C.btnDark], draw: () => plate(CHIP, C.btn, C.btnDark) },
+  { name: 'ui/card', w: CARD.size, h: CARD.size, pal: [INK, C.btn, C.btnDark], draw: () => plate(CARD, C.btn, C.btnDark) },
+  { name: 'ui/card_hover', w: CARD.size, h: CARD.size, pal: [INK, C.white, C.btn], draw: () => plate(CARD, C.white, C.btn) },
+  { name: 'ui/pill', w: PILL.size, h: PILL.size, pal: [INK, C.glow, '#5fc98d'], draw: () => pill('normal') },
+  { name: 'ui/pill_pressed', w: PILL.size, h: PILL.size, pal: [INK, '#5fc98d', C.glowDark], draw: () => pill('pressed') },
+  { name: 'ui/pill_off', w: PILL.size, h: PILL.size, pal: [INK, C.off, C.offDark], draw: () => pill('off') },
+  { name: 'ui/card_window', w: WIN.size, h: WIN.size, pal: [INK, C.frame, C.frameDark], draw: cardWindow },
   { name: 'ui/panel', w: PANEL, h: PANEL, pal: [INK, C.frame, C.frameDark, C.metal], draw: panel },
   { name: 'ui/close_button', w: 28, h: 28, pal: [INK, C.red, C.redDark, C.white], draw: closeButton },
   { name: 'ui/icon_o2', w: 24, h: 24, pal: [INK, C.white, C.btnDark, IC.cyan], draw: ICONS.o2 },
@@ -501,6 +537,8 @@ lines.push('ninepatch ui/panel ' + PANEL_MARGIN);
 lines.push('ninepatch ui/chip ' + CHIP.margin);
 lines.push('ninepatch ui/card ' + CARD.margin);
 lines.push('ninepatch ui/card_hover ' + CARD.margin);
+for (const n of ['pill', 'pill_pressed', 'pill_off']) lines.push('ninepatch ui/' + n + ' ' + PILL.margin);
+lines.push('ninepatch ui/card_window ' + WIN.margin);
 lines.push('ninepatch ui/bar_bg ' + BAR.margin.join(' '));
 lines.push('ninepatch ui/bar_fill ' + BAR.margin.join(' '));
 for (const n of ['mg_bar_bg', 'mg_bar_fill', 'mg_heat_fill']) lines.push('ninepatch ui/' + n + ' ' + MG_BAR.margin.join(' '));

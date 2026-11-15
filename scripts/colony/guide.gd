@@ -13,6 +13,14 @@ var player: Node2D
 var detector: InteractionDetector
 var hands: Hands
 var blocked := false  # the focused target can't be used right now: grey, no pulse
+# Tutorial: when `lead` is on, only `target` is marked (brackets, or a ring for a drop), with a pointer and a trail of
+# dots along `trail` to it, whether or not anything is carried.
+var lead := false
+var target: Node2D
+var target_label := ""
+var target_tag := false
+var trail := PackedVector2Array()
+var show_trail := true  # off: only the target's marks, no dots or pointer
 var _t := 0.0
 var _ring := ColonyMap.texture(ColonyMap.PROPS + "mark_ring.png")
 var _ring_blocked := ColonyMap.texture(ColonyMap.PROPS + "mark_ring_blocked.png")
@@ -45,6 +53,9 @@ func _draw() -> void:
 		draw_set_transform(at, 0.0, Vector2(ColonyMap.PX, ColonyMap.PX))
 		draw_texture(ring, -ring.get_size() * 0.5, Color(1, 1, 1, pulse))
 		draw_set_transform(Vector2.ZERO)
+	if lead:
+		_lead()
+		return
 	if hands and not hands.is_empty():
 		var goals := colony.destinations(hands.type)
 		for s in goals:
@@ -58,6 +69,56 @@ func _draw() -> void:
 		var s := _nearest(colony.stations_of(kind)) as Station
 		if s:
 			_outline(s, 0.5, false)
+
+
+const DOT_GAP := 44.0
+const DOT_SKIP := 70.0  # no dots right under the player
+const TRAIL_MAX := 1800.0
+const LEAD_ARROW := 280.0  # the pointer shows while the target is farther than this
+
+
+func _lead() -> void:
+	if not is_instance_valid(target):
+		return
+	if show_trail:
+		_trail()
+	if target is Station:
+		_outline(target, 1.0, target_tag)
+	else:
+		var pulse := 0.75 + 0.25 * sin(_t * 6.0)
+		draw_set_transform(target.global_position + Vector2(0, -12), 0.0, Vector2(ColonyMap.PX, ColonyMap.PX) * (1.0 + 0.15 * sin(_t * 6.0)))
+		draw_texture(_ring, -_ring.get_size() * 0.5, Color(1, 1, 1, pulse))
+		draw_set_transform(Vector2.ZERO)
+	if show_trail and player.global_position.distance_to(target.global_position) > LEAD_ARROW:
+		_pointer(target.global_position, target_label)
+
+
+func _trail() -> void:
+	if trail.size() < 2:
+		return
+	var px := ColonyMap.PX
+	var length := 0.0
+	for i in trail.size() - 1:
+		length += trail[i].distance_to(trail[i + 1])
+	# spaced from the target end, so dots stay put on the ground as the player walks and only march toward the target
+	var d := fposmod(length + _t * 90.0, DOT_GAP)
+	var walked := 0.0
+	for i in trail.size() - 1:
+		var a := trail[i]
+		var b := trail[i + 1]
+		var seg := a.distance_to(b)
+		while d <= seg:
+			var at := walked + d
+			if at > TRAIL_MAX:
+				return
+			if at > DOT_SKIP:
+				var p := a.lerp(b, d / seg).round()
+				var alpha := clampf(1.0 - at / TRAIL_MAX, 0.25, 1.0)
+				draw_rect(Rect2(p - Vector2(3, 3) * px, Vector2(6, 6) * px), Color(Items.INK, alpha))
+				draw_rect(Rect2(p - Vector2(2, 2) * px, Vector2(4, 4) * px), Color(RING, alpha))
+			d += DOT_GAP
+		d -= seg
+		walked += seg
 
 
 func _outline(s: Station, alpha: float, tag: bool) -> void:

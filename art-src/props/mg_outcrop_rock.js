@@ -152,13 +152,11 @@ function mgoBurst() {
 // The big round minigame button (as mg_solar_button) with a rock hammer as its icon.
 function mgoButton(pressed) {
   return () => {
-    const S = MGO, k = 1.5, cx = 38 * k, cy = 36 * k, R = 34 * k, dy = pressed ? 4 * k : 0;
+    const S = MGO, k = 1.5, cx = 38 * k, cy = 36 * k, R = 34 * k, dy = 0;
     seed = 611;
-    const lip = shape(mgoCircle(cx, cy + 6 * k, R, 64), S.btnLip, 0, AMP);
-    path(lip, true); stroke(LINE);
-    const face = shape(mgoCircle(cx, cy + dy, R, 64), S.btn, 0, AMP);
+    const face = shape(mgoCircle(cx, cy + dy, R, 64), pressed ? S.btnDark : S.btn, 0, AMP);
     clipTo(face, () => blob([...smooth([[cx + 40 * k, cy + dy - 6 * k], [cx + 18 * k, cy + dy + 22 * k], [cx - 12 * k, cy + dy + 30 * k],
-      [cx - 40 * k, cy + dy + 22 * k]], false, 3), [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], S.btnDark));
+      [cx - 40 * k, cy + dy + 22 * k]], false, 3), [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], pressed ? S.btnLip : S.btnDark));
     path(face, true); stroke(LINE);
     ctx.save();
     ctx.translate(cx - 36, cy + dy + 23);
@@ -176,7 +174,7 @@ registerProp('mg_outcrop_sample', { w: BW, h: BH, ox: -BX, oy: -BY, draw: mgoChu
 registerProp('mg_outcrop_socket', { w: BW, h: BH, ox: -BX, oy: -BY, draw: mgoSocket, pal: mgoRockPal });
 for (let i = 1; i <= 5; i++) registerProp('mg_outcrop_crack_' + i, { w: MGO.w, h: MGO.h, ox: 0, oy: 0, draw: mgoCrack(i), pal: () => [INK] });
 registerProp('mg_outcrop_hammer', { w: 165, h: 165, ox: 45, oy: 150, scale: [1.5, 1.5], draw: mgoHammer(0), pal: mgoHammerPal });
-registerProp('mg_outcrop_hammer_up', { w: 165, h: 165, ox: 45, oy: 150, scale: [1.5, 1.5], draw: mgoHammer(30), pal: mgoHammerPal });
+registerProp('mg_outcrop_hammer_up', { w: 165, h: 165, ox: 45, oy: 150, scale: [1.5, 1.5], draw: mgoHammer(20), pal: mgoHammerPal });
 registerProp('mg_outcrop_chip_a', { w: 10, h: 10, ox: 0, oy: 0, draw: mgoChip(false), pal: () => [INK, ROCK.lit, ROCK.dark] });
 registerProp('mg_outcrop_chip_b', { w: 10, h: 10, ox: 0, oy: 0, draw: mgoChip(true), pal: () => [INK, MGO.fleck, MGO.fleckDark] });
 registerProp('mg_outcrop_burst', { w: 19, h: 19, ox: 0, oy: 0, draw: mgoBurst, pal: () => [INK, '#ffffff'] });

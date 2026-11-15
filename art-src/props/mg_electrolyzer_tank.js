@@ -6,7 +6,7 @@ const MGE = {
   wall: '#262b38', panel: '#2f3646', seam: '#1c202b', brass: '#c99a4a', brassDark: '#8f6834',
   steel: '#a9bcc4', steelDark: '#6b818c', glass: '#c4d8d4', back: '#1f2a36',
   water: '#3f8fb8', waterDark: '#2d6d93', waterLit: '#8fd0e6', hole: '#1b1e2b',
-  plus: '#e0503c', plusDark: '#a8322a', minus: '#4a5568', bolt: '#f2c84b',
+  plus: '#e0503c', plusDark: '#a8322a', minus: '#7d8aa0', bolt: '#f2c84b',
   w: 252, h: 222,
   tubes: [86, 166], tubeHalf: 12, tubeTop: 44, tubeBottom: 170, inner: 8,
   tank: [44, 96, 208, 202], waterTop: 108,

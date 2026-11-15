@@ -107,13 +107,11 @@ function mgsSparkle() {
 // The big round minigame button (as workstation.html's bigButton) with a squeegee icon instead of a word.
 function mgsButton(pressed) {
   return () => {
-    const S = MGS, k = 1.5, cx = 38 * k, cy = 36 * k, R = 34 * k, dy = pressed ? 4 * k : 0;
+    const S = MGS, k = 1.5, cx = 38 * k, cy = 36 * k, R = 34 * k, dy = 0;
     seed = 611;
-    const lip = shape(mgsCircle(cx, cy + 6 * k, R, 64), S.btnLip, 0, AMP);
-    path(lip, true); stroke(LINE);
-    const face = shape(mgsCircle(cx, cy + dy, R, 64), S.btn, 0, AMP);
+    const face = shape(mgsCircle(cx, cy + dy, R, 64), pressed ? S.btnDark : S.btn, 0, AMP);
     clipTo(face, () => blob([...smooth([[cx + 40 * k, cy + dy - 6 * k], [cx + 18 * k, cy + dy + 22 * k], [cx - 12 * k, cy + dy + 30 * k],
-      [cx - 40 * k, cy + dy + 22 * k]], false, 3), [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], S.btnDark));
+      [cx - 40 * k, cy + dy + 22 * k]], false, 3), [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], pressed ? S.btnLip : S.btnDark));
     path(face, true); stroke(LINE);
     const ix = cx - 4, iy = cy + dy - 2;
     const pole = shape(rounded([[ix - 3, iy - 4], [ix + 15, iy - 30], [ix + 22, iy - 25], [ix + 4, iy + 1]], 2), S.pole, 0, AMP);

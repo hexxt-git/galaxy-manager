@@ -256,6 +256,97 @@ func _arc(a: Vector2, c: Vector2, b: Vector2) -> PackedVector2Array:
 	return pts
 
 
+## Walking cost from every cell to the walkable spot nearest `to`, weighted like find_path's; -1 where unreachable.
+## Slow (hundreds of ms), so it's meant for a worker thread; walk_down() then reads paths off it for free.
+func cost_field(to: Vector2) -> PackedInt32Array:
+	var n := _clear.size()
+	var cost := PackedInt32Array()
+	cost.resize(n)
+	cost.fill(-1)
+	var goal := _index(_nearest_free(to))
+	if goal < 0 or _clear[goal] == 0:
+		return cost
+	var w := _region.size.x
+	# Dial's algorithm: step costs are small ints, so a ring of buckets stands in for a heap
+	const RING := 512
+	var buckets := []
+	buckets.resize(RING)
+	for k in RING:
+		buckets[k] = []
+	var done := PackedByteArray()
+	done.resize(n)
+	cost[goal] = 0
+	buckets[0].append(goal)
+	var pending := 1
+	var at := 0
+	while pending > 0:
+		var b: Array = buckets[at % RING]
+		if b.is_empty():
+			at += 1
+			continue
+		var i: int = b.pop_back()
+		pending -= 1
+		if done[i]:
+			continue
+		done[i] = 1
+		var x := i % w
+		var y := i / w
+		for dy in range(-1, 2):
+			var ny := y + dy
+			if ny < 0 or ny >= _region.size.y:
+				continue
+			for dx in range(-1, 2):
+				var nx := x + dx
+				if (dx == 0 and dy == 0) or nx < 0 or nx >= w:
+					continue
+				var j := ny * w + nx
+				if _clear[j] == 0 or done[j]:
+					continue
+				if dx != 0 and dy != 0 and (_clear[y * w + nx] == 0 or _clear[ny * w + x] == 0):
+					continue
+				var step := (14 if dx != 0 and dy != 0 else 10) * (1 + int(WALL_COST) * maxi(0, COMFORT - _clear[j]))
+				var c := cost[i] + step
+				if cost[j] < 0 or c < cost[j]:
+					cost[j] = c
+					buckets[c % RING].append(j)
+					pending += 1
+	return cost
+
+
+## Path from `from` downhill on a cost_field() to its goal, smoothed for its first `smooth` px (smoothing is the
+## costly part); empty when unreachable.
+func walk_down(field: PackedInt32Array, from: Vector2, smooth := INF) -> PackedVector2Array:
+	var id := _nearest_free(from)
+	var i := _index(id)
+	if i < 0 or field[i] < 0:
+		return PackedVector2Array()
+	var ids: Array[Vector2i] = [id]
+	while field[i] > 0:
+		var best := i
+		var best_id := id
+		for dy in range(-1, 2):
+			for dx in range(-1, 2):
+				var nid := id + Vector2i(dx, dy)
+				var j := _index(nid)
+				if j < 0 or field[j] < 0 or field[j] >= field[best]:
+					continue
+				if dx != 0 and dy != 0 and (clearance(id + Vector2i(dx, 0)) == 0 or clearance(id + Vector2i(0, dy)) == 0):
+					continue
+				best = j
+				best_id = nid
+		if best == i:
+			break
+		i = best
+		id = best_id
+		ids.append(id)
+	var cut := mini(ids.size(), int(minf(smooth / CELL, ids.size())))
+	var needs := PackedInt32Array()
+	var out := _round_corners(_pull(from, ids.slice(0, maxi(cut, 1)), needs), needs)
+	for k in range(cut, ids.size()):
+		out.append(Vector2(ids[k]) * CELL)
+	return out
+
+
 func line_clear(a: Vector2, b: Vector2, need: int) -> bool:
 	var steps := ceili(a.distance_to(b) / (CELL * 0.5))
 	for s in steps + 1:

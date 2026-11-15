@@ -58,7 +58,7 @@ const PX := 2.0  # screen px per art px
 const CELL := 48  # art px per tile
 const GROUND_ART := {"_": "floor_greenhouse", ".": "floor_hab", "=": "floor_lab", "-": "floor_lifesupport",
 	",": "regolith", ":": "crater"}
-const FONT := preload("res://assets/fonts/Fredoka.ttf")
+const FONT := preload("res://assets/fonts/fredoka_bold.tres")
 const FLOOR_AO := preload("res://assets/shaders/floor_ao.gdshader")
 const ROOMS := [Rect2i(9, 9, 14, 7), Rect2i(24, 9, 15, 7), Rect2i(9, 17, 14, 7), Rect2i(24, 17, 15, 7)]  # interior cells
 const AO_RADIUS := 70.0

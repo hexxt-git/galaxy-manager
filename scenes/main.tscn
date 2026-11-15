@@ -4,7 +4,6 @@
 [ext_resource type="Texture2D" uid="uid://b6pafx655yllj" path="res://assets/art/character/character.png" id="3_character"]
 [ext_resource type="Script" uid="uid://dlki7k1cfa4ak" path="res://scripts/joystick.gd" id="4_joy"]
 [ext_resource type="Shader" uid="uid://ctsmywedep5kk" path="res://assets/art/character/character_recolor.gdshader" id="5_recolor"]
-[ext_resource type="Script" uid="uid://bqh2nhe6grrbq" path="res://scripts/main.gd" id="6_main"]
 [ext_resource type="Script" uid="uid://boflgyq2illim" path="res://scripts/interaction/interaction_detector.gd" id="7_detector"]
 [ext_resource type="Script" uid="uid://c2tdf4k3nlsdu" path="res://scripts/map/station_map.gd" id="8_map"]
 [ext_resource type="Script" uid="uid://c8n23a5a25hpt" path="res://scripts/ui/use_button.gd" id="9_use"]
@@ -37,7 +36,6 @@ font_size = 11
 font_color = Color(0.051, 0.051, 0.071, 1)
 
 [node name="Main" type="Node2D" unique_id=1097392039]
-script = ExtResource("6_main")
 
 [node name="World" type="Node2D" parent="." unique_id=849298708]
 y_sort_enabled = true

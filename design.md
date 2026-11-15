@@ -1,4 +1,4 @@
-# Galaxy Manager: art design
+# Moon Crew: art design
 
 Rules worked out from the art in `assets/art/` and its sources in `art-src/`. New art should follow them unless there's a deliberate reason to break one.
 

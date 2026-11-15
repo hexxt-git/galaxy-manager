@@ -8,6 +8,7 @@ extends RefCounted
 ##   _needle() 0..1, _done, _lock > 0 after a miss, _pop > 0 just after a good input, _flash / _flash_t (last message)
 ## mg.size is the drawing area (about 552 x 772 px). Draw with mg.draw_*; art should be pixel art at HUD.UI_SCALE.
 
+const PIXEL_FONT := preload("res://scripts/ui/pixel_font.gd")
 const HUD := preload("res://scripts/colony/hud.gd")
 const MODES := {"hold": "mg_hold", "taps": "mg_tap", "timing": "mg_stop"}
 
@@ -84,4 +85,9 @@ func draw_flash(mg: Minigame, at: Vector2) -> void:
 
 
 func draw_fact(mg: Minigame) -> void:
-	mg.draw_multiline_string(ColonyMap.FONT, Vector2(30, mg.size.y - 150), mg.fact, HORIZONTAL_ALIGNMENT_LEFT, mg.size.x - 60, 22, -1, Color.WHITE)
+	var font := PIXEL_FONT.font()
+	var size := PIXEL_FONT.DRAW_SIZE
+	var at := Vector2(30, mg.size.y - 104)
+	var w := mg.size.x - 60
+	mg.draw_multiline_string_outline(font, at, mg.fact, HORIZONTAL_ALIGNMENT_CENTER, w, size, -1, 4, Color("0d0d12"))
+	mg.draw_multiline_string(font, at, mg.fact, HORIZONTAL_ALIGNMENT_CENTER, w, size, -1, Color("fff4d6"))

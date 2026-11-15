@@ -4,17 +4,28 @@ extends "res://scripts/bots/bot.gd"
 ## Slower than the player, so the commander's own work still counts.
 
 const WORK_TIME := 4.0
-const BASE_SPEED := 0.75
+const BASE_SPEED := 0.7  # of the player's walking speed
 const THINK_EVERY := 0.5
 const DIRTY := 0.3
 const SPREAD := 36.0
+const GREETINGS := ["Hey chief!", "Hi boss!", "Good going, captain!", "Morning, commander!", "Reporting for duty!",
+	"Looking sharp, chief!", "Nice base, boss!", "Captain! Good to see you.", "Hey boss, need a hand?"]
+const GREET_NEAR := 260.0  # px from the player to greet them in passing
+const GREET_EVERY := 300.0  # seconds near the player, on average, between greetings in passing
+const SAY_TIME := 2.6
 const FAVOURITE := 0.8  # head start for their favourite task: they only help elsewhere when it has nothing to do  # crew sharing a station stand side by side
 
 var role := "ice"
 var perk := ""
 var crew_name := ""
 var busy_with := "idle"  # what they're doing right now, for the HUD
+var greets := true  # walk up to say hello on arrival, and now and then in passing
+var _arrived := false
+var _saying := ""
+var _say_t := 0.0
+var _greet_in := 0.0
 var colony: Colony
+var BUBBLE: StyleBox = preload("res://scripts/colony/hud.gd").nine("chip", 12, Vector4.ZERO)
 var hands := Hands.new()
 
 var _then := Callable()
@@ -30,7 +41,13 @@ func _ready() -> void:
 	wander = false
 	add_to_group("helpers")
 	super()
-	target_reached.connect(func() -> void: _work = _work_time() if _then.is_valid() else -1.0)
+	target_reached.connect(func() -> void:
+		if busy_with == "saying hello":
+			_say(GREETINGS.pick_random())
+			_work = SAY_TIME
+		else:
+			_work = _work_time() if _then.is_valid() else -1.0)
+	_greet_in = randf_range(GREET_EVERY * 0.6, GREET_EVERY * 1.4)
 
 
 func _work_time() -> float:
@@ -39,6 +56,13 @@ func _work_time() -> float:
 
 func _physics_process(delta: float) -> void:
 	super(delta)
+	if _say_t > 0.0:
+		_say_t -= delta
+		if _say_t <= 0.0:
+			_saying = ""
+			queue_redraw()
+	elif greets and _arrived and colony:
+		_greet_in_passing(delta)
 	if (has_path() and not wander) or colony == null:
 		return
 	if _work >= 0.0:
@@ -55,7 +79,39 @@ func _physics_process(delta: float) -> void:
 		_decide()
 
 
+func _say(text: String) -> void:
+	_saying = text
+	_say_t = SAY_TIME
+	queue_redraw()
+
+
+func _player() -> Node2D:
+	return get_tree().get_first_node_in_group("player")
+
+
+## Now and then, when the player is close, a quick hello without stopping work.
+func _greet_in_passing(delta: float) -> void:
+	var p := _player()
+	if p == null or global_position.distance_to(p.global_position) > GREET_NEAR:
+		return
+	_greet_in -= delta
+	if _greet_in <= 0.0:
+		_greet_in = randf_range(GREET_EVERY * 0.6, GREET_EVERY * 1.4)
+		_say(GREETINGS.pick_random())
+
+
 func _decide() -> void:
+	if greets and not _arrived:
+		_arrived = true
+		var p := _player()
+		if p:
+			busy_with = "saying hello"
+			var side := Vector2(70.0 if randf() < 0.5 else -70.0, 10.0)
+			_go(p.global_position + side, func() -> void: pass)
+			if not has_path():
+				_say(GREETINGS.pick_random())
+				_work = SAY_TIME
+			return
 	var doing := _deliver()
 	if doing == "" and not hands.is_empty():
 		hands.toss(Vector2.DOWN)
@@ -166,3 +222,9 @@ func _draw() -> void:
 	var text := "%s · %s" % [crew_name, Colony.ROLES[role][0]]
 	draw_string_outline(font, Vector2(-100, -192), text, HORIZONTAL_ALIGNMENT_CENTER, 200, 22, 8, Color("0d0d12"))
 	draw_string(font, Vector2(-100, -192), text, HORIZONTAL_ALIGNMENT_CENTER, 200, 22, Color.WHITE)
+	if _saying != "":
+		var w := font.get_string_size(_saying, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x + 28.0
+		var box := Rect2(-w * 0.5, -262, w, 44)
+		draw_style_box(BUBBLE, box)
+		draw_colored_polygon(PackedVector2Array([Vector2(-10, box.end.y - 3), Vector2(10, box.end.y - 3), Vector2(0, box.end.y + 12)]), Color("dfe5ea"))
+		draw_string(font, Vector2(box.position.x, box.position.y + 29), _saying, HORIZONTAL_ALIGNMENT_CENTER, w, 22, Color("0d0d12"))

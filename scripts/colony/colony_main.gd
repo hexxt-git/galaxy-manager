@@ -6,10 +6,14 @@ const BOT := preload("res://scenes/bot.tscn")
 const HELPER := preload("res://scripts/colony/helper.gd")
 const NavGrid := preload("res://scripts/bots/nav_grid.gd")
 const PLAYLOG := preload("res://scripts/colony/playlog.gd")
+const TUTORIAL := preload("res://scripts/colony/tutorial.gd")
+const DIALOG := preload("res://scripts/colony/dialog.gd")
 const CRATER_DARK := preload("res://assets/shaders/crater_dark.gdshader")
+const VISION := preload("res://scripts/colony/colony_vision.gd")
 const OUTSIDE_DARK := preload("res://assets/shaders/outside_dark.gdshader")
 const POPUP_RISE := 70.0
 const POPUP_TIME := 1.2
+const FADE_IN := 0.8
 
 @onready var colony: Colony = $Colony
 @onready var map: ColonyMap = $World/Map
@@ -34,6 +38,7 @@ var _offer_ms := 0
 var _open_ms := 0
 var _open_title := ""
 var playlog: Node
+var dialog: Control = DIALOG.new()
 
 
 var _dark_mat := ShaderMaterial.new()
@@ -79,6 +84,8 @@ func _add_outside_dark() -> void:
 
 
 func _ready() -> void:
+	var fade := _black_cover()
+	$HUD.add_child(dialog)
 	playlog = PLAYLOG.new()
 	playlog.colony = colony
 	playlog.main = self
@@ -86,6 +93,10 @@ func _ready() -> void:
 	items.add_to_group("item_layer")
 	map.build(items)
 	_add_crater_dark()
+	var vision := VISION.new()
+	vision.viewer = player
+	vision.map = map
+	add_child(vision)
 	_add_outside_dark()
 	colony.setup(map, items)
 	player.global_position = map.spawn
@@ -123,7 +134,30 @@ func _ready() -> void:
 	hands.changed.connect(func() -> void: playlog.write("hands", {"holding": Items.label(hands.type, hands.count) if hands.count else "nothing"}))
 	colony.add_crew(player)
 	hud.show_message("Move: WASD or the stick.  Use: E or the USE button.  Drop: G.  Map: M.", 10.0)
+	var tutorial: Node = null
+	if Colony.start_tutorial:
+		tutorial = TUTORIAL.new()
+		tutorial.main = self
+		add_child(tutorial)
 	await _build_nav()
+	if tutorial:
+		tutorial.begin()
+	var tw := fade.create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_property(fade.get_child(0), "modulate:a", 0.0, FADE_IN)
+	tw.tween_callback(fade.queue_free)
+
+
+## Black over everything until the map, crew and paths are ready.
+func _black_cover() -> CanvasLayer:
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	var black := ColorRect.new()
+	black.color = Color.BLACK
+	black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	black.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(black)
+	add_child(layer)
+	return layer
 
 
 func _who(actor: Node) -> String:
@@ -153,11 +187,17 @@ func _process(delta: float) -> void:
 	hands.caption = _caption()
 	guide.blocked = why != ""
 	use_button.disabled = target == null or why != ""
-	_dark_mat.set_shader_parameter("light_pos", player.global_position + Vector2(0, -40))
+	update_light()
 	var area := map.char_at(player.global_position)
 	if area != _area:
 		_area = area
 		playlog.write("area", {"where": {".": "inside", ",": "surface", ":": "crater"}.get(area, area), "at": player.global_position.round()})
+
+
+## The crater's light circle follows the camera, so it moves along when the camera glances somewhere.
+func update_light() -> void:
+	var cam: Camera2D = player.get_node("Camera")
+	_dark_mat.set_shader_parameter("light_pos", player.global_position + Vector2(0, -40) + cam.offset)
 
 
 func _caption() -> String:
@@ -182,8 +222,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("map"):
 		minimap.toggle()
 		playlog.write("map", {"open": minimap.visible, "via": "key"})
-	elif event.is_action_pressed("quit"):
-		get_tree().quit()
 
 
 func _drop() -> void:
@@ -260,11 +298,11 @@ func _on_station_used(s: Station, by: Node) -> void:
 	if s.kind == "note":
 		playlog.write("note", {"note": s.state.note})
 		colony.bump("notes")
-		var l := Label.new()
-		l.text = Colony.NOTES[s.state.note]
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.add_theme_font_size_override("font_size", 26)
-		_open("Note", l)
+		var note: Array = Colony.NOTES[s.state.note]
+		dialog.say(note[1], "", note[0])
+		return
+	if colony.tutorial_gated(s):
+		hud.show_message(colony.blocked_reason(s, by))
 		return
 	if not hands.is_empty() and not colony.accepts(s, hands.type):
 		playlog.write("auto_drop", {"item": Items.label(hands.type, hands.count), "station": s.title})
