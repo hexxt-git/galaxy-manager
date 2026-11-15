@@ -1,12 +1,10 @@
 extends Node2D
 
 ## World-space hints. A ring under whatever the player would USE. While carrying something, every station it can go to
-## is outlined with "BRING HERE", and a small labelled pointer shows the way when none is near. Without a load, the
-## current objective's station gets a soft outline only, no pointer.
+## gets corner brackets and a BRING HERE tag, and a small labelled pointer shows the way when none is near. Without a
+## load, the current objective's station gets faint brackets only, no pointer.
 
 const RING := Color(1, 0.86, 0.2)
-const RING_BLOCKED := Color(0.65, 0.68, 0.74, 0.7)
-const SOFT := Color(1, 0.86, 0.2, 0.45)
 const ARROW_DIST := 120.0
 const NEAR := 700.0
 
@@ -16,6 +14,11 @@ var detector: InteractionDetector
 var hands: Hands
 var blocked := false  # the focused target can't be used right now: grey, no pulse
 var _t := 0.0
+var _ring := ColonyMap.texture(ColonyMap.PROPS + "mark_ring.png")
+var _ring_blocked := ColonyMap.texture(ColonyMap.PROPS + "mark_ring_blocked.png")
+var _corner := ColonyMap.texture(ColonyMap.PROPS + "mark_corner.png")
+var _arrow := ColonyMap.texture(ColonyMap.PROPS + "mark_arrow.png")
+var _tag := ColonyMap.texture(ColonyMap.PROPS + "mark_bring.png")
 
 
 func _process(delta: float) -> void:
@@ -37,16 +40,15 @@ func _draw() -> void:
 	var focus := detector.focus
 	if focus:
 		var at: Vector2 = focus.get_parent().global_position
-		draw_set_transform(at, 0.0, Vector2(1, 0.4))
-		if blocked:
-			draw_arc(Vector2.ZERO, 46.0, 0, TAU, 32, RING_BLOCKED, 4.0)
-		else:
-			draw_arc(Vector2.ZERO, 46.0 + sin(_t * 6.0) * 3.0, 0, TAU, 32, RING, 5.0)
+		var ring := _ring_blocked if blocked else _ring
+		var pulse := 1.0 if blocked else 0.75 + 0.25 * sin(_t * 6.0)
+		draw_set_transform(at, 0.0, Vector2(ColonyMap.PX, ColonyMap.PX))
+		draw_texture(ring, -ring.get_size() * 0.5, Color(1, 1, 1, pulse))
 		draw_set_transform(Vector2.ZERO)
 	if hands and not hands.is_empty():
 		var goals := colony.destinations(hands.type)
 		for s in goals:
-			_outline(s, RING, "BRING HERE")
+			_outline(s, 1.0, true)
 		var near := _nearest(goals) as Station
 		if near and player.global_position.distance_to(near.global_position) > NEAR:
 			_pointer(near.global_position, near.title)
@@ -55,26 +57,36 @@ func _draw() -> void:
 	if kind != "":
 		var s := _nearest(colony.stations_of(kind)) as Station
 		if s:
-			_outline(s, SOFT, "")
+			_outline(s, 0.5, false)
 
 
-func _outline(s: Station, colour: Color, text: String) -> void:
-	var r := Rect2(s.global_position - Vector2(s.size.x * 0.5, s.size.y), s.size).grow(6.0 + sin(_t * 5.0) * 3.0)
-	draw_rect(r, colour, false, 5.0)
-	if text != "":
-		var font := ThemeDB.fallback_font
-		var at := Vector2(r.position.x - 60, r.position.y - 12)
-		draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_CENTER, r.size.x + 120, 22, 6, Color("0d0d12"))
-		draw_string(font, at, text, HORIZONTAL_ALIGNMENT_CENTER, r.size.x + 120, 22, colour)
+func _outline(s: Station, alpha: float, tag: bool) -> void:
+	var px := ColonyMap.PX
+	var breathe := roundf(1.0 + sin(_t * 5.0)) * px * 2.0
+	var r := Rect2(s.global_position - Vector2(s.size.x * 0.5, s.size.y), s.size)
+	if s.art:
+		r = Rect2(s.global_position - s.art_origin * px, s.art.get_size() * px)
+	r = r.grow(8.0 + breathe)
+	var tint := Color(1, 1, 1, alpha)
+	for c in [[r.position, Vector2(1, 1)], [Vector2(r.end.x, r.position.y), Vector2(-1, 1)],
+			[Vector2(r.position.x, r.end.y), Vector2(1, -1)], [r.end, Vector2(-1, -1)]]:
+		draw_set_transform(c[0], 0.0, c[1] * px)
+		draw_texture(_corner, -Vector2(3, 3), tint)
+	if tag:
+		draw_set_transform(Vector2(r.get_center().x, r.position.y - 4.0), 0.0, Vector2(px, px))
+		draw_texture(_tag, -Vector2(_tag.get_width() * 0.5, _tag.get_height()), tint)
+	draw_set_transform(Vector2.ZERO)
 
 
 func _pointer(to: Vector2, label: String) -> void:
 	var from := player.global_position + Vector2(0, -60)
-	var dir := from.direction_to(to)
+	var angle := snappedf(from.direction_to(to).angle(), PI / 4.0)
+	var dir := Vector2.from_angle(angle)
 	var tip := from + dir * ARROW_DIST
-	var side := dir.orthogonal() * 12.0
-	draw_colored_polygon(PackedVector2Array([tip + dir * 18.0, tip + side, tip - side]), RING)
-	var font := ThemeDB.fallback_font
+	draw_set_transform(tip, angle, Vector2(ColonyMap.PX, ColonyMap.PX))
+	draw_texture(_arrow, -_arrow.get_size() * 0.5)
+	draw_set_transform(Vector2.ZERO)
+	var font := ColonyMap.FONT
 	var at := tip + dir * 40.0 + Vector2(-100, 8)
-	draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_CENTER, 200, 18, 5, Color("0d0d12"))
-	draw_string(font, at, label, HORIZONTAL_ALIGNMENT_CENTER, 200, 18, RING)
+	draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_CENTER, 200, 24, 8, Color("0d0d12"))
+	draw_string(font, at, label, HORIZONTAL_ALIGNMENT_CENTER, 200, 24, RING)

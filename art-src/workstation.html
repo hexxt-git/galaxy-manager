@@ -132,36 +132,92 @@ function hand(x, y, fill, shade) {
   ctx.restore();
 }
 
-// Hand-lettered "USE", each glyph 7 x 12 px, 4 px apart, starting at (x, y) top-left.
+// Hand-lettered capitals, each glyph 7 x 12 px, 4 px apart, starting at (x, y) top-left.
+// Strokes wrapped in S() stay straight; the rest are smoothed into round brush curves.
+const S = p => ({ sharp: p });
 const GLYPHS = {
   U: [[[0, 0], [0, 8], [1.2, 11], [3.5, 12], [5.8, 11], [7, 8], [7, 0]]],
   S: [[[7, 1.5], [5, 0], [2, 0], [0, 2.2], [1, 5], [3.5, 6], [6, 7], [7, 9.6], [5.2, 12], [2, 12], [0, 10.5]]],
-  E: [[[7, 0], [0, 0], [0, 12], [7, 12]], [[0, 6], [5.5, 6]]],
+  E: [S([[7, 0], [0, 0], [0, 12], [7, 12]]), S([[0, 6], [5.5, 6]])],
+  D: [S([[0, 0], [0, 12]]), [[0, 0], [3, 0], [6, 1.5], [7, 5], [7, 7], [6, 10.5], [3, 12], [0, 12]]],
+  R: [S([[0, 12], [0, 0]]), [[0, 0], [4, 0], [6.6, 1], [7, 3.3], [6.6, 5.6], [4, 6.6], [0, 6.6]], S([[3.6, 6.6], [7, 12]])],
+  O: [[[3.5, 0], [6, 0.8], [7, 4], [7, 8], [6, 11.2], [3.5, 12], [1, 11.2], [0, 8], [0, 4], [1, 0.8], [3.5, 0], [6, 0.8]]],
+  P: [S([[0, 12], [0, 0]]), [[0, 0], [4, 0], [6.6, 1], [7, 3.3], [6.6, 5.6], [4, 6.6], [0, 6.6]]],
+  M: [S([[-0.5, 12], [-0.3, 0], [3.5, 5.5], [7.3, 0], [7.5, 12]])],
+  A: [S([[0, 12], [3.5, 0], [7, 12]]), S([[1.6, 7.6], [5.4, 7.6]])],
+  T: [S([[-0.5, 0], [7.5, 0]]), S([[3.5, 0], [3.5, 12]])],
+  H: [S([[0, 0], [0, 12]]), S([[7, 0], [7, 12]]), S([[0, 6], [7, 6]])],
+  L: [S([[0, 0], [0, 12], [7, 12]])],
+  N: [S([[0, 12], [0, 0], [7, 12], [7, 0]])],
 };
 
-function letters(text, x, y, color) {
+// k scales the glyph shapes only; the brush stays W.
+function letters(text, x, y, color, k = 1) {
   seed = 501;
   [...text].forEach((ch, i) => {
     for (const s of GLYPHS[ch]) {
-      const pts = s.map(([px, py]) => [x + i * 11 + px, y + py]);
-      pen(ch === 'E' ? pts : smooth(pts, false, 2), W, color, AMP);
+      const pts = (s.sharp || s).map(([px, py]) => [x + (i * 11 + px) * k, y + py * k]);
+      pen(s.sharp ? pts : smooth(pts, false, 2), W, color, AMP);
     }
   });
 }
 
+// Down arrow dropping into an open tray, about 26 x 28 px, centred on (0, 0).
+function dropIcon(x, y, fill, shade) {
+  ctx.save();
+  ctx.translate(x, y);
+  seed = 411;
+  part(roundPoly([[-13, 3], [-9, 3], [-9, 7], [9, 7], [9, 3], [13, 3], [13, 12], [-13, 12]], 2.5),
+    fill, [[-20, 9], [20, 9], [20, 20], [-20, 20]], shade);
+  part(roundPoly([[-4, -16], [4, -16], [4, -5], [10, -5], [0, 5], [-10, -5], [-4, -5]], 2),
+    fill, [[-20, 0], [20, 0], [20, 10], [-20, 10]], shade);
+  ctx.restore();
+}
+
+// Three-panel folded map with a route line, about 26 x 28 px, centred on (0, 0).
+function mapIcon(x, y, fill, shade, line) {
+  ctx.save();
+  ctx.translate(x, y);
+  seed = 421;
+  const out = [[-12, -10.5], [-4, -13.5], [4, -10.5], [12, -13.5], [12, 10.5], [4, 13.5], [-4, 10.5], [-12, 13.5]];
+  const sp = part(roundPoly(out, 1.5), fill, [[-4, -14], [4, -11], [4, 14], [-4, 11]], shade);
+  clipTo(sp, () => pen([[-8.5, 6], [-1, 1], [7, -4]], DETAIL, line, 0));
+  path(sp, true); stroke(W);
+  pen([[-4, -13.5], [-4, 10.5]], DETAIL, INK, AMP);
+  pen([[4, -10.5], [4, 13.5]], DETAIL, INK, AMP);
+  ctx.restore();
+}
+
 const BTN = { w: 76, h: 80 };
 
-function useButton(state) {
+function roundButton(state, label, icon) {
   const off = state === 'disabled';
-  const [face, faceDark, lip, icon] = off ? [C.off, C.offDark, C.offLip, C.offIcon] : [C.btn, C.btnDark, C.btnLip, C.white];
+  const [face, faceDark, lip, iconFill] = off ? [C.off, C.offDark, C.offLip, C.offIcon] : [C.btn, C.btnDark, C.btnLip, C.white];
   const cx = 38, cy = 36, R = 34, dy = state === 'pressed' ? 4 : 0;
   seed = 601;
   part(circle(cx, cy + 6, R), lip);
   part(circle(cx, cy + dy, R), face,
     [...smooth([[cx + 40, cy + dy - 6], [cx + 18, cy + dy + 22], [cx - 12, cy + dy + 30], [cx - 40, cy + dy + 22]], false, 3),
       [cx - 40, cy + 60], [cx + 40, cy + 60]], faceDark);
-  hand(cx, cy + dy - 10, icon, off ? C.offDark : C.btnDark);
-  letters('USE', cx - 14.5, cy + dy + 7.5, off ? C.offLip : INK);
+  icon(cx, cy + dy - 10, iconFill, off ? C.offDark : C.btnDark, lip);
+  letters(label, cx - (label.length * 11 - 4) / 2, cy + dy + 7.5, off ? C.offLip : INK);
+}
+
+const useButton = state => roundButton(state, 'USE', hand);
+const dropButton = state => roundButton(state, 'DROP', dropIcon);
+const mapButton = state => roundButton(state, 'MAP', mapIcon);
+
+// Pale 9-slice plates in the button family: thin ink outline, flat face, a short lip along the bottom.
+// No wobble, so stretched edges stay straight.
+const CHIP = { size: 32, r: 6, lip: 6, margin: 12 };
+const CARD = { size: 48, r: 8, lip: 7, margin: 16 };
+function plate(spec, face, shade, lipFill) {
+  const { size, r, lip } = spec, e = W / 2;
+  const back = rect(e, e, size - e, size - e, r), front = rect(e, e, size - e, size - e - lip, r);
+  path(back, true); ctx.fillStyle = lipFill; ctx.fill(); stroke(W);
+  path(front, true); ctx.fillStyle = face; ctx.fill();
+  clipTo(front, () => blob([[0, size - lip - 6], [size, size - lip - 6], [size, size], [0, size]], shade));
+  path(front, true); stroke(W);
 }
 
 // 9-slice frame: 20 px margins on every side; the header strip and bottom shadow band sit inside the margins.
@@ -194,6 +250,158 @@ function screenIcon() {
   pen([[7.5, 8], [13, 8]], DETAIL, C.glowDark, 0);
 }
 
+// HUD resource icons, 24 x 24, in the USE hand's language: thin DETAIL ink edge, white face, a shade band
+// below a soft curve, at most one accent.
+const IC = {
+  cyan: '#8fdcf0', blue: '#4aa2ee', tan: '#d9a76a', sprout: '#7ed957',
+  bolt: '#ffd83f', purple: '#a764e0', visor: '#72dcf2',
+};
+
+// Shade band: everything below a gentle curve dipping through (x0..x1, y), as on the hand.
+const band = (x0, x1, y, dip = 2.5) =>
+  [...smooth([[x0 - 4, y - 2], [(x0 + x1) / 2, y + dip], [x1 + 4, y - 3]], false, 3), [x1 + 4, 30], [x0 - 4, 30]];
+
+function glyph(body, cut, shade, extra) {
+  const sp = shape(body, C.white, 0, AMP);
+  clipTo(sp, () => { if (cut) blob(cut, shade); if (extra) extra(); });
+  path(sp, true); stroke(DETAIL);
+  return sp;
+}
+
+const dot = (x, y) => { ctx.beginPath(); ctx.arc(x, y, 1.1, 0, 2 * Math.PI); ctx.fillStyle = INK; ctx.fill(); };
+
+const ICONS = {
+  o2() {
+    seed = 1001;
+    glyph(circle(10, 13.5, 7.5, 32), band(2.5, 17.5, 16), C.btnDark,
+      () => pen(smooth([[6, 13], [6.8, 10.2], [9, 8.6]], false, 2), DETAIL, IC.cyan, 0));
+    glyph(circle(19.5, 5.5, 3, 24), band(16, 23, 6.5, 1), C.btnDark);
+  },
+  water() {
+    seed = 1011;
+    glyph(smooth([[12, 2], [16, 8], [18.5, 13], [18, 18], [15, 21], [9, 21], [6, 18], [5.5, 13], [8, 8]], true, 2),
+      band(5, 19, 14.5), IC.blue);
+  },
+  food() {
+    seed = 1021;
+    glyph(smooth([[3.5, 13], [5, 8], [9.5, 6.5], [13, 8], [17.5, 6.5], [20.5, 10], [20.5, 15.5], [16.5, 19.5], [8, 19.5], [4, 17]], true, 2),
+      band(3, 21, 14), IC.tan);
+    dot(8, 11); dot(15.5, 14.5);
+  },
+  power() {
+    seed = 1031;
+    glyph(roundPoly([[12.5, 2], [4.5, 13.5], [10.5, 13.5], [8, 22], [20, 9.5], [14, 9.5], [18, 2]], 1, 4),
+      band(4, 20, 12, 1.5), IC.bolt);
+  },
+  research() {
+    seed = 1041;
+    glyph(roundPoly([[9.5, 3.5], [14.5, 3.5], [14.5, 9], [20, 18.5], [19, 20.5], [5, 20.5], [4, 18.5], [9.5, 9]], 1.5, 4),
+      band(3, 21, 14, 1.5), IC.purple);
+    pen([[8.5, 3.5], [15.5, 3.5]], DETAIL, INK, 0);
+  },
+  crew() {
+    seed = 1051;
+    glyph(rect(2.5, 9, 7, 17.5, 1.8), band(1, 8, 14, 1), C.btnDark);
+    glyph(smooth([[6, 21], [5.5, 9], [7, 4.5], [12, 2.5], [17, 4.5], [18.5, 9], [18.5, 21], [14, 21], [13.5, 18.5], [11, 18.5], [10.5, 21]], true, 2),
+      band(5, 19, 15.5), C.btnDark);
+    part0(rect(10, 6.5, 20.5, 12, 2.6), IC.visor);
+  },
+};
+
+function part0(pts, fill) {
+  const sp = shape(pts, fill, 0, AMP);
+  path(sp, true); stroke(DETAIL);
+}
+
+// Thin progress bar 9-slice (16 x 8): same rounded track for both, fill drawn over the track in-engine.
+const BAR = { w: 16, h: 8, r: 3, margin: [4, 4, 4, 3] };
+function bar(face, topLine) {
+  const e = DETAIL / 2, b = rect(e, e, BAR.w - e, BAR.h - e, BAR.r);
+  path(b, true); ctx.fillStyle = face; ctx.fill();
+  clipTo(b, () => blob([[0, 0], [BAR.w, 0], [BAR.w, 4], [0, 4]], topLine));
+  path(b, true); stroke(DETAIL);
+}
+
+// --- minigame UI ---------------------------------------------------------------
+
+// The USE button at 1.5x: same geometry scaled, same brush. Label only, no icon.
+const MG = { w: 114, h: 120, k: 1.5 };
+const MG_FACES = {
+  normal: [C.btn, C.btnDark, C.btnLip, INK],
+  done: ['#7ed957', '#58b347', '#2f7a45', INK],
+  wait: [C.off, C.offDark, C.offLip, C.offLip],
+};
+function bigButton(state, label) {
+  const k = MG.k, [face, faceDark, lip, ink] = MG_FACES[state === 'pressed' ? 'normal' : state];
+  const cx = 38 * k, cy = 36 * k, R = 34 * k, dy = state === 'pressed' ? 4 * k : 0;
+  seed = 611;
+  part(circle(cx, cy + 6 * k, R, 64), lip);
+  part(circle(cx, cy + dy, R, 64), face,
+    [...smooth([[cx + 40 * k, cy + dy - 6 * k], [cx + 18 * k, cy + dy + 22 * k], [cx - 12 * k, cy + dy + 30 * k], [cx - 40 * k, cy + dy + 22 * k]], false, 3),
+      [cx - 40 * k, cy + 60 * k], [cx + 40 * k, cy + 60 * k]], faceDark);
+  if (label) {
+    const lk = 1.4;
+    letters(label, cx - (label.length * 11 - 4) * lk / 2, cy + dy - 6 * lk - 4, ink, lk);
+  } else {
+    for (const ox of [-13, 0, 13]) {
+      ctx.beginPath(); ctx.arc(cx + ox, cy - 4, 3.6, 0, 2 * Math.PI); ctx.fillStyle = ink; ctx.fill();
+    }
+  }
+}
+
+// Chunky progress bars, same build as BAR. Margins are left, top, right, bottom.
+const MG_BAR = { w: 24, h: 14, r: 5, top: 5, margin: [7, 6, 7, 5] };
+function chunkyBar(face, topLine) {
+  const e = DETAIL / 2, b = rect(e, e, MG_BAR.w - e, MG_BAR.h - e, MG_BAR.r);
+  path(b, true); ctx.fillStyle = face; ctx.fill();
+  clipTo(b, () => blob([[0, 0], [MG_BAR.w, 0], [MG_BAR.w, MG_BAR.top], [0, MG_BAR.top]], topLine));
+  path(b, true); stroke(DETAIL);
+}
+
+// Recessed timing track: dark well, deeper shadow along the top inside edge.
+const MG_TRACK = { w: 32, h: 26, r: 6, margin: [8, 8, 8, 8] };
+function track() {
+  const e = DETAIL / 2, b = rect(e, e, MG_TRACK.w - e, MG_TRACK.h - e, MG_TRACK.r);
+  path(b, true); ctx.fillStyle = C.panel; ctx.fill();
+  clipTo(b, () => blob([[0, 0], [MG_TRACK.w, 0], [MG_TRACK.w, 6], [0, 6]], C.frameDark));
+  path(b, true); stroke(DETAIL);
+}
+
+// Target band, drawn inside the track's well (inset by the track's 2 px edge in-engine).
+const MG_BAND = { w: 12, h: 22, r: 2, margin: [3, 5, 3, 3] };
+function targetBand() {
+  const e = DETAIL / 2, b = rect(e, e, MG_BAND.w - e, MG_BAND.h - e, MG_BAND.r);
+  path(b, true); ctx.fillStyle = '#7ed957'; ctx.fill();
+  clipTo(b, () => blob([[0, 0], [MG_BAND.w, 0], [MG_BAND.w, 4], [0, 4]], '#b8f08e'));
+  path(b, true); stroke(DETAIL);
+}
+
+// Needle 6 x 32: white core, 1 px ink edge, square-cut so the core stays readable. Origin at its centre.
+function needle() {
+  blob([[0, 1], [1, 1], [1, 0], [5, 0], [5, 1], [6, 1], [6, 31], [5, 31], [5, 32], [1, 32], [1, 31], [0, 31]], INK);
+  blob([[1, 1], [5, 1], [5, 31], [1, 31]], C.white);
+}
+
+// --- joystick -----------------------------------------------------------------
+
+// Pale pad, 64 x 64: thin ink rim and an inner groove; the face pixels are made translucent after pixelating.
+const JOY = { size: 64, faceAlpha: 0.45 };
+function joyBase() {
+  seed = 1101;
+  const c = JOY.size / 2;
+  path(circle(c, c, c - DETAIL / 2 - 0.5, 64), true); ctx.fillStyle = C.btn; ctx.fill(); stroke(DETAIL);
+  path(circle(c, c, 19, 48), true); stroke(DETAIL, C.btnDark);
+}
+
+// Knob 28 x 28 in the button face style; the face centre (14, 13) is the touch point.
+function joyKnob() {
+  seed = 1111;
+  const cx = 14, cy = 13, R = 10.5;
+  part(circle(cx, cy + 2.5, R, 32), C.btnLip);
+  part(circle(cx, cy, R, 32), C.btn,
+    [...smooth([[cx + 13, cy - 2], [cx + 6, cy + 7], [cx - 4, cy + 9], [cx - 13, cy + 7]], false, 3), [cx - 13, cy + 20], [cx + 13, cy + 20]], C.btnDark);
+}
+
 // --- sprites -----------------------------------------------------------------
 
 const WS = { w: 86, h: 81, ox: 43, oy: 74 };
@@ -206,9 +414,42 @@ const SPRITES = [
     pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => useButton('pressed') },
   { name: 'ui/use_button_disabled', w: BTN.w, h: BTN.h,
     pal: [INK, C.off, C.offDark, C.offLip, C.offIcon], draw: () => useButton('disabled'), alpha: 0.4 },
+  { name: 'ui/drop_button', w: BTN.w, h: BTN.h,
+    pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => dropButton('normal') },
+  { name: 'ui/drop_button_pressed', w: BTN.w, h: BTN.h,
+    pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => dropButton('pressed') },
+  { name: 'ui/map_button', w: BTN.w, h: BTN.h,
+    pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => mapButton('normal') },
+  { name: 'ui/map_button_pressed', w: BTN.w, h: BTN.h,
+    pal: [INK, C.btn, C.btnDark, C.btnLip, C.white], draw: () => mapButton('pressed') },
+  { name: 'ui/chip', w: CHIP.size, h: CHIP.size, pal: [INK, C.btn, C.btnDark], draw: () => plate(CHIP, C.btn, C.btnDark, C.btnDark) },
+  { name: 'ui/card', w: CARD.size, h: CARD.size, pal: [INK, C.btn, C.btnDark], draw: () => plate(CARD, C.btn, C.btnDark, C.btnDark) },
+  { name: 'ui/card_hover', w: CARD.size, h: CARD.size, pal: [INK, C.white, C.btn, C.btnDark], draw: () => plate(CARD, C.white, C.btn, C.btnDark) },
   { name: 'ui/panel', w: PANEL, h: PANEL, pal: [INK, C.frame, C.frameDark, C.metal], draw: panel },
   { name: 'ui/close_button', w: 28, h: 28, pal: [INK, C.red, C.redDark, C.white], draw: closeButton },
+  { name: 'ui/icon_o2', w: 24, h: 24, pal: [INK, C.white, C.btnDark, IC.cyan], draw: ICONS.o2 },
+  { name: 'ui/icon_water', w: 24, h: 24, pal: [INK, C.white, C.btnDark, IC.blue], draw: ICONS.water },
+  { name: 'ui/icon_food', w: 24, h: 24, pal: [INK, C.white, C.btnDark, IC.tan], draw: ICONS.food },
+  { name: 'ui/icon_power', w: 24, h: 24, pal: [INK, C.white, C.btnDark, IC.bolt], draw: ICONS.power },
+  { name: 'ui/icon_research', w: 24, h: 24, pal: [INK, C.white, C.btnDark, IC.purple], draw: ICONS.research },
+  { name: 'ui/icon_crew', w: 24, h: 24, pal: [INK, C.white, C.btnDark, IC.visor], draw: ICONS.crew },
+  { name: 'ui/bar_bg', w: BAR.w, h: BAR.h, pal: [INK, C.btnDark, C.btnLip], draw: () => bar(C.btnDark, C.btnLip) },
+  { name: 'ui/bar_fill', w: BAR.w, h: BAR.h, pal: [INK, '#7ed957', '#b8f08e'], draw: () => bar('#7ed957', '#b8f08e') },
   { name: 'ui/screen_icon', w: 26, h: 26, pal: [INK, C.metal, C.metalDark, C.glow, C.glowDark], draw: screenIcon },
+  ...['TAP', 'HOLD', 'STOP'].flatMap(l => [
+    { name: 'ui/mg_' + l.toLowerCase(), w: MG.w, h: MG.h, pal: [INK, C.btn, C.btnDark, C.btnLip], draw: () => bigButton('normal', l) },
+    { name: 'ui/mg_' + l.toLowerCase() + '_pressed', w: MG.w, h: MG.h, pal: [INK, C.btn, C.btnDark, C.btnLip], draw: () => bigButton('pressed', l) },
+  ]),
+  { name: 'ui/mg_done', w: MG.w, h: MG.h, pal: [INK, ...MG_FACES.done.slice(0, 3)], draw: () => bigButton('done', 'DONE') },
+  { name: 'ui/mg_wait', w: MG.w, h: MG.h, pal: [INK, C.off, C.offDark, C.offLip], draw: () => bigButton('wait', '') },
+  { name: 'ui/mg_bar_bg', w: MG_BAR.w, h: MG_BAR.h, pal: [INK, C.btnDark, C.btnLip], draw: () => chunkyBar(C.btnDark, C.btnLip) },
+  { name: 'ui/mg_bar_fill', w: MG_BAR.w, h: MG_BAR.h, pal: [INK, '#7ed957', '#b8f08e'], draw: () => chunkyBar('#7ed957', '#b8f08e') },
+  { name: 'ui/mg_heat_fill', w: MG_BAR.w, h: MG_BAR.h, pal: [INK, '#e8873a', '#f5b36e'], draw: () => chunkyBar('#e8873a', '#f5b36e') },
+  { name: 'ui/mg_track', w: MG_TRACK.w, h: MG_TRACK.h, pal: [INK, C.panel, C.frameDark], draw: track },
+  { name: 'ui/mg_band', w: MG_BAND.w, h: MG_BAND.h, pal: [INK, '#7ed957', '#b8f08e'], draw: targetBand },
+  { name: 'ui/mg_needle', w: 6, h: 32, pal: [INK, C.white], draw: needle },
+  { name: 'ui/joy_base', w: JOY.size, h: JOY.size, pal: [INK, C.btn, C.btnDark], draw: joyBase, faceAlpha: [C.btn, JOY.faceAlpha] },
+  { name: 'ui/joy_knob', w: 28, h: 28, pal: [INK, C.btn, C.btnDark, C.btnLip], draw: joyKnob },
 ];
 
 const lines = [];
@@ -232,6 +473,14 @@ for (const s of SPRITES) {
     f.drawImage(px, 0, 0);
     px = faded;
   }
+  if (s.faceAlpha) {
+    const [hex, a] = s.faceAlpha, [r, g, b] = soften(hex), f = px.getContext('2d');
+    const im = f.getImageData(0, 0, s.w, s.h);
+    for (let i = 0; i < im.data.length; i += 4) {
+      if (im.data[i] === r && im.data[i + 1] === g && im.data[i + 2] === b) im.data[i + 3] = Math.round(255 * a);
+    }
+    f.putImageData(im, 0, 0);
+  }
   lines.push(s.name + ' ' + px.toDataURL('image/png'));
 
   v.font = 'bold 15px sans-serif';
@@ -249,6 +498,17 @@ for (const s of SPRITES) {
 }
 lines.push('origin props/workstation ' + WS.ox + ' ' + WS.oy);
 lines.push('ninepatch ui/panel ' + PANEL_MARGIN);
+lines.push('ninepatch ui/chip ' + CHIP.margin);
+lines.push('ninepatch ui/card ' + CARD.margin);
+lines.push('ninepatch ui/card_hover ' + CARD.margin);
+lines.push('ninepatch ui/bar_bg ' + BAR.margin.join(' '));
+lines.push('ninepatch ui/bar_fill ' + BAR.margin.join(' '));
+for (const n of ['mg_bar_bg', 'mg_bar_fill', 'mg_heat_fill']) lines.push('ninepatch ui/' + n + ' ' + MG_BAR.margin.join(' '));
+lines.push('ninepatch ui/mg_track ' + MG_TRACK.margin.join(' '));
+lines.push('ninepatch ui/mg_band ' + MG_BAND.margin.join(' '));
+lines.push('origin ui/mg_needle 3 16');
+lines.push('origin ui/joy_base 32 32');
+lines.push('origin ui/joy_knob 14 13');
 document.getElementById('out').textContent = lines.join('\n');
 </script>
 </body>

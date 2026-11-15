@@ -13,7 +13,7 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 const PREFER := ["bed", "panel", "bed_x", "reactor", "panel_x", "bit", "automation", "lab_x", "training", "recycler", "boots", "coating"]
-const PREFER_CREW := ["harvest", "ice", "rocks", "solar", "shield"]
+const PREFER_CREW := ["harvest", "ice", "rocks", "solar"]
 
 
 ## Picks like a sensible player: what grows food and power first.
@@ -79,8 +79,8 @@ func _run() -> void:
 		if colony.time >= next_print:
 			next_print += 60.0
 			var r := colony.res
-			print("%2d min crew %2d  o2 %5.0f w %5.0f f %5.0f r %5.0f sh %3.0f/%3.0f  next %d/%d  pw %.1f/%.1f  beds %d  ups %s" % [
-				int(colony.time / 60), colony.crew.size(), r.o2, r.water, r.food, r.research, r.shield, colony.shield_need(),
+			print("%2d min crew %2d  o2 %5.0f w %5.0f f %5.0f r %5.0f  next %d/%d  pw %.1f/%.1f  beds %d  ups %s" % [
+				int(colony.time / 60), colony.crew.size(), r.o2, r.water, r.food, r.research,
 				colony.crew_cost(), colony.upgrade_cost(), colony.power.x, colony.power.y, colony.stations_of("bed").size(), colony.levels])
 	print("arrivals ", arrivals)
 	if won_at < 0.0 and colony.finished:

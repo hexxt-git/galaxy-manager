@@ -5,10 +5,10 @@ extends Node
 ## every task gives its output the moment someone does it, so every extra pair of hands means more output.
 ##   ice     — drill ice in the crater, carry it to the ice melter: water
 ##   air     — split water into oxygen at the electrolyzer
-##   harvest — tend a potato bed: 1 water becomes food on the spot. Beds also grow food on their own from water and power.
+##   harvest — tend a potato bed (1 water) and carry the potatoes to the kitchen: food. Beds also grow potatoes on their own
+##             from water and power; they wait in the bed until someone collects them.
 ##   solar   — wipe moondust off the solar panels: power
 ##   rocks   — dig rocks at an outcrop, carry them to the lab: research
-##   shield  — (from SHIELD_AT crew) dig regolith bags, stack them in the shield wall against solar flares
 ## Food buys crewmates, called in at the Comms dish; research buys buildings (beds, panels, reactor) and doubling upgrades, Cookie Clicker style.
 
 signal message(text: String)
@@ -18,7 +18,6 @@ signal station_added(s: Station)
 signal crew_changed
 signal did(s: Station, actor: Node, result: String)
 signal won
-signal flare(hit: bool)
 
 const CREWMATE := preload("res://scripts/crewmate.gd")
 
@@ -33,7 +32,8 @@ const SPLIT_WATER := 2.0  # water used by one run of the electrolyzer
 const SPLIT_O2 := 2.0  # air it makes at full power
 const TEND_FOOD := 1.5
 const TEND_WATER := 1.0
-const BED_RATE := 0.5  # food per bed per minute, on its own
+const BED_RATE := 0.5  # potatoes per bed per minute, on its own
+const BED_CAP := 6.0  # potatoes a bed holds before it stops growing
 const BED_WATER := 0.25  # water per bed per minute while it grows
 const DUST_RATE := 1.0 / 120.0
 const PANEL_POWER := 1.5
@@ -48,9 +48,7 @@ const LAB_POWER := 1.0  # extra power the lab draws while it works
 const SPLIT_POWER := 1.0  # extra power the electrolyzer draws while it works
 const LAB_BUSY := 10.0  # seconds the lab keeps drawing power after an analysis
 const SCAN_HITS := 3  # the player's scan is this many hits, whatever the rock count
-const BAGS_PER_DIG := 2
 const OVEN_O2 := 3.0  # per rock, against 1 per ice
-const SHIELD_PER_CREW := 3.0
 const ARRIVAL_FOOD := 5.0
 const CREW_GROWTH := 1.35
 const UPGRADE_COST := 3.0
@@ -58,13 +56,7 @@ const UPGRADE_GROWTH := 1.35
 const WIN_CREW := 12
 const MAX_CREW := 20  # the base keeps growing after the win, up to this
 const REACTOR_AT := 3
-const SHIELD_AT := 5
 const OVEN_AT := 7
-const FLARE_EVERY := 75.0
-const FLARE_WEAR := 1.0  # bags each flare wears away per crewmate
-const FLARE_WARN := 15.0
-const FATIGUE := 30.0
-const FATIGUE_SLOW := 0.6
 const PERFECT := 2.0  # output multiplier for a flawless minigame
 const SLOW := 0.6
 const WALK := 1.5  # everyone walks faster to cover the roomier map
@@ -72,15 +64,14 @@ const CARDS := 3
 const OFFER_GAP := 15.0  # seconds between two card pickers
 const ICE_ENOUGH := 2.0  # minutes of water and air in the tanks before crew stop drilling
 
-const TASKS := ["ice", "air", "harvest", "solar", "rocks", "shield"]
-const CREW_ROLES := ["ice", "harvest", "solar", "rocks", "shield"]
+const TASKS := ["ice", "air", "harvest", "solar", "rocks"]
+const CREW_ROLES := ["ice", "harvest", "solar", "rocks"]
 const ROLES := {
 	"air": ["Chemist", "Splits water into air."],
 	"ice": ["Miner", "Likes drilling ice and melting it into water."],
-	"harvest": ["Farmer", "Likes tending the potato beds."],
+	"harvest": ["Farmer", "Likes tending the potato beds and carrying the harvest to the kitchen."],
 	"solar": ["Technician", "Likes keeping the solar panels clean."],
 	"rocks": ["Geologist", "Likes digging rocks for the lab."],
-	"shield": ["Builder", "Likes stacking regolith shielding."],
 }
 const PERKS := {
 	"quick": ["Quick", "Walks 30% faster."],
@@ -92,10 +83,10 @@ const NAMES := ["Ada", "Yuri", "Mae", "Neil", "Sally", "Buzz", "Kalpana", "Chris
 # id -> [title, text, rule]. Rules: slot (builds into a free slot of that letter), crew (needs that many crew),
 # own [station kind, counts] / stat [stat, counts]: one more level each time the count is reached, max: plain limit.
 const UPGRADES := {
-	"bed": ["Grow bed", "Another potato bed: grows food on its own and gives crew one more place to tend.", {"slot": "G"}],
+	"bed": ["Grow bed", "Another potato bed: grows potatoes on its own and gives crew one more place to tend.", {"slot": "G"}],
 	"panel": ["Solar panel", "Another solar panel on the field: +%.1f power when clean." % PANEL_POWER, {"slot": "S"}],
 	"reactor": ["Kilopower reactor", "+%d steady power, day or night. Drinks %.1f cooling water a minute." % [REACTOR_POWER, REACTOR_WATER], {"slot": "N", "crew": REACTOR_AT}],
-	"bed_x": ["Hydroponic roots", "Beds grow twice as much food on their own. Roots in nutrient water grow faster than in soil.", {"own": ["bed", [3, 5, 6]]}],
+	"bed_x": ["Hydroponic roots", "Beds grow twice as many potatoes on their own. Roots in nutrient water grow faster than in soil.", {"own": ["bed", [3, 5, 6]]}],
 	"panel_x": ["Multi-junction cells", "Double the power of every panel. Stacked cell layers catch more colours of sunlight.", {"own": ["solar", [4, 6]]}],
 	"bit": ["Diamond drill bit", "Double the ice from every drill run.", {"stat": ["ice", [8, 30]]}],
 	"lab_x": ["Mass spectrometer", "Double the research from every rock.", {"stat": ["rocks", [15, 60]]}],
@@ -103,23 +94,22 @@ const UPGRADES := {
 	"recycler": ["Water recycler", "Crew need half the water. The ISS recycles about 98% of its water.", {"max": 1}],
 	"boots": ["Better suits", "Crew walk and work 25% faster.", {"max": 2}],
 	"training": ["Crew training", "Crew walk and work 15% faster. Can be taken again and again.", {"endless": true, "crew": 6}],
-	"automation": ["Greenhouse automation", "Beds grow 50% more food on their own. Can be taken again and again.", {"endless": true, "crew": 6}],
+	"automation": ["Greenhouse automation", "Beds grow 50% more potatoes on their own. Can be taken again and again.", {"endless": true, "crew": 6}],
 }
 # crew count -> [what unlocks, message]
 const UNLOCKS := {
 	REACTOR_AT: ["reactor", "Unlocked: the Kilopower reactor. Look for it in the upgrade cards."],
-	SHIELD_AT: ["shield", "Unlocked: radiation shielding. Solar flares will start hitting the base: dig regolith in the pit north of the hab and stack the bags in the hab's shield wall."],
 	OVEN_AT: ["oven", "Unlocked: the ISRU oven in the life support room. It bakes oxygen out of moon rocks, if you can spare them from the lab."],
 }
 const NOTES := {
-	1: "WELCOME, COMMANDER\nYou're alone at Shackleton Base, on the Moon's south pole.\nKeep four things going: ice, potatoes, solar power and research.\nStock food to recruit crewmates, spend research on buildings and upgrades.\nUSE picks things up, DROP (G) throws them, M shows the map.",
+	1: "WELCOME, COMMANDER\nYou're alone at Shackleton Base, on the Moon's south pole.\nKeep four things going: ice, potatoes, solar power and research.\nCarry potatoes to the kitchen to recruit crewmates, spend research on buildings and upgrades.\nUSE picks things up, DROP (G) throws them, M shows the map.",
 	2: "POWER\nSolar is free, but moondust keeps cutting what the panels make.\nA small fission reactor (NASA's Kilopower) gives steady power no matter what, and a lunar night lasts about 14 Earth days.",
 	3: "GREENHOUSE\nPlants grow under red and blue LEDs, the colours chlorophyll absorbs best.\nPotatoes are a top space crop: lots of calories in little space. They need water and power.",
 	4: "LIFE SUPPORT\nIce is melted and filtered into water. The electrolyzer then splits water with electricity:\n2 H2O -> 2 H2 + O2\nThat's the oxygen you breathe. Every drop you split is a drop nobody drinks or grows food with.",
 	5: "LAB\nMoon rocks tell us what's here and how to use it. Ilmenite holds oxygen and titanium; dark crater floors hold ice.\nResearch buys buildings and upgrades: pick the one your base needs most.",
 	6: "SOLAR FIELD\nNear the south pole the Sun skims the horizon, so high ground is lit most of the time.\nMoondust is sharp and clings to everything. Dusty panels make less power.",
 	7: "SHACKLETON CRATER\nIts floor hasn't seen sunlight in billions of years: about -230 C.\nThat cold trapped water ice, the most precious thing on the Moon.",
-	8: "RADIATION\nThe Moon has no air and no magnetic field to stop solar flares.\nAbout half a metre of packed regolith (moon dirt) blocks most of a flare. Every crewmate needs %d bags of it." % SHIELD_PER_CREW,
+	8: "KITCHEN\nWater and power flow through pipes and wires, but food has to be carried.\nEvery potato stocked here feeds the crew, and a full pantry is what lets Earth send another crewmate.",
 	9: "ISRU OVEN\nIn-situ resource use: making what you need from what's there.\nMoon rock is about 40% oxygen by mass, locked in minerals like ilmenite. Heat it with hydrogen and out comes water.",
 }
 # kind -> what using it does, shown on the station and in the USE prompt
@@ -128,18 +118,17 @@ const RECIPES := {
 	"drill": "makes ice",
 	"melter": "ice -> water",
 	"electrolyzer": "water -> air (uses lots of power)",
-	"bed": "water -> food",
+	"bed": "water -> potatoes",
+	"kitchen": "potatoes -> food stock",
 	"lab": "rocks + water -> research (uses lots of power)",
 	"outcrop": "makes rocks",
-	"pit": "makes regolith bags",
-	"shield": "bags -> flare shield",
 	"oven": "rocks -> air",
 	"reactor": "water -> power",
 	"comms": "food -> new crewmate",
 }
-const MAKES := {"drill": "ice", "outcrop": "sample", "pit": "bag"}
+const MAKES := {"drill": "ice", "outcrop": "sample", "bed": "potato"}
 # carried item -> station kinds it goes to
-const DESTINATIONS := {"ice": ["melter"], "sample": ["lab", "oven"], "bag": ["shield"]}
+const DESTINATIONS := {"ice": ["melter"], "sample": ["lab", "oven"], "potato": ["kitchen"]}
 # kind -> [minigame mode, fact shown during it]
 const MINIGAMES := {
 	"solar": ["taps", "Wipe the dust! Moondust is electrostatic: it clings to everything."],
@@ -148,10 +137,9 @@ const MINIGAMES := {
 	"lab": ["timing", "Stop the scan on the green band to identify the mineral's spectral line. No misses and the last hit earns 50% more."],
 	"outcrop": ["taps", "Chip off a sample. Most moon rock is basalt or anorthosite, the bright rock of the highlands."],
 	"electrolyzer": ["hold", "Hold to run current through the water. Bubbles of hydrogen and oxygen come off the two electrodes."],
-	"pit": ["taps", "Shovel regolith into bags. It's fine as flour and sharp as glass."],
 }
 
-var res := {"o2": 4.0, "water": 8.0, "food": 3.0, "research": 0.0, "shield": 0.0}
+var res := {"o2": 4.0, "water": 8.0, "food": 3.0, "research": 0.0}
 var crew: Array[Node] = []
 var time := 0.0
 var power := Vector2.ZERO  # supply, demand
@@ -163,14 +151,11 @@ var paused := false
 var step := 0
 var lab_busy := 0.0
 var split_busy := 0.0
-var fatigue := 0.0  # seconds of flare fatigue left
-var flare_in := INF
 var map: ColonyMap
 var items: Node
 
 var _offering := false
 var _last_offer := -INF
-var _warned := false
 
 
 func setup(m: ColonyMap, item_layer: Node) -> void:
@@ -183,6 +168,8 @@ func setup(m: ColonyMap, item_layer: Node) -> void:
 func _init_station(s: Station) -> void:
 	if s.kind == "solar":
 		s.state.dust = 0.6
+	elif s.kind == "bed":
+		s.state.grown = 0.0
 
 
 func stations_of(kind: String) -> Array:
@@ -213,13 +200,9 @@ func upgrade_cost() -> float:
 	return roundf(UPGRADE_COST * pow(UPGRADE_GROWTH, count("upgrades")))
 
 
-func shield_need() -> float:
-	return SHIELD_PER_CREW * crew.size()
-
-
-## How fast crew walk and work, from suits and flare fatigue.
+## How fast crew walk and work, from suits and training.
 func work_speed() -> float:
-	return pow(1.25, level("boots")) * pow(1.15, level("training")) * (FATIGUE_SLOW if fatigue > 0.0 else 1.0)
+	return pow(1.25, level("boots")) * pow(1.15, level("training"))
 
 
 ## Stations a carried `item` can be used at right now.
@@ -235,6 +218,7 @@ func power_ratio() -> float:
 	return clampf(power.x / power.y, 0.0, 1.0) if power.y > 0.0 else 1.0
 
 
+## Potatoes per minute all beds grow on their own.
 func food_rate() -> float:
 	return stations_of("bed").size() * BED_RATE * mult("bed_x") * pow(1.5, level("automation")) * power_ratio() if res.water > 0.0 else 0.0
 
@@ -259,14 +243,14 @@ func tick(delta: float) -> void:
 		supply += PANEL_POWER * mult("panel_x") * (1.0 - s.state.dust)
 	var beds := stations_of("bed").size()
 	power = Vector2(supply, BASE_DEMAND + CREW_DEMAND * crew.size() + BED_DEMAND * beds + (LAB_POWER if lab_busy > 0.0 else 0.0) + (SPLIT_POWER if split_busy > 0.0 else 0.0))
-	res.food += food_rate() * m
+	var grow := food_rate() * m / maxf(1.0, beds)
+	for s in stations_of("bed"):
+		s.state.grown = minf(BED_CAP, s.state.grown + grow)
 	if res.water > 0.0:
 		res.water = maxf(0.0, res.water - BED_WATER * beds * m)
 
 	lab_busy = maxf(0.0, lab_busy - delta)
 	split_busy = maxf(0.0, split_busy - delta)
-	fatigue = maxf(0.0, fatigue - delta)
-	_tick_flare(delta)
 	for c in crew:
 		if is_instance_valid(c):
 			var perk := 1.3 if c.get_meta("perk", "") == "quick" else 1.0
@@ -274,30 +258,6 @@ func tick(delta: float) -> void:
 			c.speed_scale = perk * c.get_meta("base_speed", 1.0) * suit * (SLOW if res.o2 <= 0.0 else 1.0)
 	_check_offers()
 	_update_labels()
-
-
-func _tick_flare(delta: float) -> void:
-	if not unlocked.has("shield"):
-		return
-	flare_in -= delta
-	if flare_in <= FLARE_WARN and not _warned:
-		_warned = true
-		message.emit("Solar flare in %d s! Shielding: %d / %d bags." % [FLARE_WARN, res.shield, shield_need()])
-	if flare_in <= 0.0:
-		flare_in = FLARE_EVERY
-		_warned = false
-		bump("flares")
-		var wear := minf(res.shield, FLARE_WEAR * crew.size())
-		if res.shield >= shield_need():
-			bump("flares_blocked")
-			res.shield -= wear
-			message.emit("Solar flare! The regolith shield stopped it, but %d bags crumbled." % wear)
-			flare.emit(false)
-		else:
-			fatigue = FATIGUE
-			res.shield -= wear
-			message.emit("Solar flare hit an unshielded base: crew work slowly for %d s. Stack more regolith bags." % FATIGUE)
-			flare.emit(true)
 
 
 func _check_offers() -> void:
@@ -328,7 +288,7 @@ func _crew_cards() -> Array:
 	if colours.is_empty():
 		colours = CREWMATE.COLOURS.keys()
 	colours.shuffle()
-	var roles: Array = CREW_ROLES.filter(func(t: String) -> bool: return t != "shield" or unlocked.has("shield"))
+	var roles: Array = CREW_ROLES.duplicate()
 	roles.shuffle()
 	var taken := crew.map(func(c: Node) -> String: return str(c.get("crew_name")))
 	var names: Array = NAMES.filter(func(n: String) -> bool: return n not in taken)
@@ -429,8 +389,6 @@ func add_crew(c: Node) -> void:
 		if crew.size() >= at and not unlocked.has(id):
 			unlocked[id] = true
 			message.emit(UNLOCKS[at][1])
-			if id == "shield":
-				flare_in = FLARE_EVERY
 	if crew.size() >= WIN_CREW and not finished:
 		finished = true
 		won.emit()
@@ -438,7 +396,6 @@ func add_crew(c: Node) -> void:
 
 func is_locked(kind: String) -> int:
 	match kind:
-		"shield", "pit": return 0 if unlocked.has("shield") else SHIELD_AT
 		"oven": return 0 if unlocked.has("oven") else OVEN_AT
 	return 0
 
@@ -455,7 +412,7 @@ func blocked_reason(s: Station, actor: Node) -> String:
 		return "Unlocks at %d crew." % is_locked(s.kind)
 	match s.kind:
 		"bed":
-			if res.water < TEND_WATER:
+			if res.water < TEND_WATER and s.state.grown < 1.0:
 				return "Needs water: melt some ice."
 		"electrolyzer":
 			if res.water < SPLIT_WATER:
@@ -471,16 +428,16 @@ func blocked_reason(s: Station, actor: Node) -> String:
 		"oven":
 			if not hands.holds("sample"):
 				return "Bring moon rocks to bake into oxygen."
-		"shield":
-			if not hands.holds("bag"):
-				return "Bring regolith bags from the pit."
+		"kitchen":
+			if not hands.holds("potato"):
+				return "Bring potatoes from the Greenhouse."
 		"reactor":
 			return "Running: %d steady power." % REACTOR_POWER
 		"comms":
 			if crew.size() >= MAX_CREW:
 				return "The base is full."
 			if res.food < crew_cost():
-				return "Stock %d food to feed a new crewmate (%d now)." % [crew_cost(), res.food]
+				return "Stock %d food in the kitchen first (%d now)." % [crew_cost(), res.food]
 	return ""
 
 
@@ -506,26 +463,25 @@ func finish(s: Station, actor: Node, bonus := 1.0) -> void:
 			bump("ice")
 			popup.emit(top, "+%d ice%s" % [n, tag])
 		"bed":
-			res.water -= TEND_WATER
-			var f := TEND_FOOD * bonus
-			res.food += f
-			bump("harvested")
-			popup.emit(top, "+%s food%s" % [_num(f), tag])
+			if res.water >= TEND_WATER:
+				res.water -= TEND_WATER
+				s.state.grown += TEND_FOOD * bonus
+				bump("harvested")
+			var n := floori(s.state.grown)
+			s.state.grown -= n
+			if n > 0:
+				hands.add("potato", n)
+			popup.emit(top, "+%d potatoes%s" % [n, tag])
+		"kitchen":
+			var n := hands.take()
+			res.food += n
+			bump("stocked", n)
+			popup.emit(top, "+%d food" % n)
 		"outcrop":
 			var n := roundi(ROCKS_PER_DIG * bonus)
 			hands.add("sample", n)
 			bump("dug")
 			popup.emit(top, "+%d rocks%s" % [n, tag])
-		"pit":
-			var n := roundi(BAGS_PER_DIG * bonus)
-			hands.add("bag", n)
-			bump("bags")
-			popup.emit(top, "+%d bags%s" % [n, tag])
-		"shield":
-			var n := hands.take()
-			res.shield += n
-			bump("shielded", n)
-			popup.emit(top, "shield %d / %d" % [res.shield, shield_need()])
 		"melter":
 			var w := hands.take() * WATER_PER_ICE
 			res.water += w
@@ -581,7 +537,7 @@ func _num(v: float) -> String:
 
 
 func _result_text(_s: Station) -> String:
-	return "o2=%.1f water=%.1f food=%.1f research=%d shield=%d power=%.1f/%.1f" % [res.o2, res.water, res.food, res.research, res.shield, power.x, power.y]
+	return "o2=%.1f water=%.1f food=%.1f research=%d power=%.1f/%.1f" % [res.o2, res.water, res.food, res.research, power.x, power.y]
 
 
 ## How much each task is wanted right now (0 = not at all), for crew choosing what to do.
@@ -596,9 +552,13 @@ func wants(task: String) -> float:
 			var enough := 4.0 + ICE_ENOUGH * crew.size() * BREATHE
 			return 0.0 if res.o2 >= enough else 0.2 + (1.0 - res.o2 / enough)
 		"harvest":
+			var waiting := 0.0
+			for bed in stations_of("bed"):
+				waiting += floorf(bed.state.grown)
+			var pick := minf(0.8, waiting * 0.1)
 			if res.water < TEND_WATER + 2.0:
-				return 0.0
-			return 0.3 + 0.3 * clampf(1.0 - res.food / crew_cost(), 0.0, 1.0)
+				return pick if waiting >= 2.0 else 0.0
+			return 0.3 + 0.3 * clampf(1.0 - res.food / crew_cost(), 0.0, 1.0) + pick
 		"solar":
 			var dust: Array = stations_of("solar").map(func(s: Station) -> float: return s.state.dust)
 			return dust.max() if not dust.is_empty() and dust.max() > 0.3 else 0.0
@@ -606,8 +566,6 @@ func wants(task: String) -> float:
 			if res.water < 6.0:
 				return 0.0
 			return 0.45 if res.research < upgrade_cost() else 0.1
-		"shield":
-			return 1.0 if unlocked.has("shield") and res.shield < shield_need() else 0.0
 	return 0.0
 
 
@@ -621,7 +579,8 @@ func objectives() -> Array:
 		["Carry the ice to the Ice melter", "melter", count("melted") >= 1],
 		["Split water into air at the Electrolyzer", "electrolyzer", count("split") >= 1],
 		["Tend a potato bed in the Greenhouse", "bed", count("harvested") >= 1],
-		["Stock %d food in the Greenhouse" % ARRIVAL_FOOD, "bed", res.food >= ARRIVAL_FOOD or crew.size() >= 2],
+		["Carry the potatoes to the Kitchen in the hab", "kitchen", count("stocked") >= 1],
+		["Stock %d food in the Kitchen" % ARRIVAL_FOOD, "bed", res.food >= ARRIVAL_FOOD or crew.size() >= 2],
 		["Call your first crewmate at the Comms dish in the hab", "comms", crew.size() >= 2],
 		["Dig rocks at a rock outcrop outside, carry them to the Lab", "outcrop", res.research >= 1 or count("upgrades") >= 1],
 		["Get %d research to pick your first upgrade" % UPGRADE_COST, "lab", count("upgrades") >= 1],
@@ -637,8 +596,6 @@ func current_objective() -> Array:
 	if step >= all.size() - 2 and crew.size() < MAX_CREW:
 		if can_call():
 			return ["Food ready! Call a crewmate at the Comms dish", "comms", false]
-		if unlocked.has("shield") and res.shield < shield_need():
-			return ["Flares! Fill bags at the Regolith pit, stack them at the Shield wall: %d / %d" % [res.shield, shield_need()], "pit", false]
 		var next := ""
 		for at in UNLOCKS:
 			if crew.size() < at:
@@ -656,22 +613,21 @@ func _update_labels() -> void:
 		var prompt := s.title
 		match s.kind:
 			"solar": text = "dust %d%%" % int(s.state.dust * 100)
-			"bed": text = "%.1f food/min" % (BED_RATE * mult("bed_x") * pow(1.5, level("automation")) * power_ratio()) if res.water > 0.0 else "no water"
+			"bed": text = "%d ready" % floori(s.state.grown) if s.state.grown >= 1.0 else ("growing" if res.water > 0.0 else "no water")
+			"kitchen": text = "food %d" % res.food
 			"reactor": text = "ON"
 			"lab": text = "research %d/%d" % [res.research, upgrade_cost()]
-			"shield": text = "%d / %d" % [res.shield, shield_need()] if not is_locked("shield") else "locked"
-			"pit", "oven": text = "" if not is_locked(s.kind) else "locked"
+			"oven": text = "" if not is_locked(s.kind) else "locked"
 			"comms": text = "READY" if can_call() else "%d / %d food" % [res.food, crew_cost()]
 			"note": prompt = "Read note"
 		match s.kind:
 			"melter": prompt = "Melt ice"
 			"lab", "oven": prompt = "Insert into " + s.title.to_lower()
-			"bed": prompt = "Tend"
+			"bed": prompt = "Tend and pick potatoes"
+			"kitchen": prompt = "Stock potatoes"
 			"solar": prompt = "Wipe panel"
 			"drill": prompt = "Drill ice"
 			"outcrop": prompt = "Dig rocks"
-			"pit": prompt = "Fill bags"
-			"shield": prompt = "Stack bags"
 			"comms": prompt = "Call a crewmate"
 			"electrolyzer": prompt = "Split water"
 		if RECIPES.has(s.kind) and s.kind != "reactor":

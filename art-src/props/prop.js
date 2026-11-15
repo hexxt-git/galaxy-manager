@@ -136,3 +136,20 @@ function propPage(names) {
   };
   floor.src = '../../assets/art/floor_tile.png';
 }
+
+// Chunky grey border rock for the boulder_* kit, drawn like a crate: the silhouette is the lit top face, everything
+// below `edge` (a left-to-right polyline running past both sides) is the dark front face, inked along the fold.
+const ROCK = { lit: '#a9adb2', dark: '#7c818b' };
+const rockPal = () => [INK, ROCK.lit, ROCK.dark, GROUND];
+function borderRock(seedValue, R) {
+  seed = seedValue;
+  const a = R.half;
+  blob(rounded(rect(-a - 1, -5, a + 3, 4.5), 4), GROUND);
+  const sil = shape(rounded(R.sil, R.r || 7), ROCK.lit, 0, AMP);
+  clipTo(sil, () => {
+    blob([...R.edge, [R.edge[R.edge.length - 1][0], 10], [R.edge[0][0], 10]], ROCK.dark);
+    pen(R.edge, LINE, INK, AMP);
+    if (R.crack) pen(R.crack, DETAIL, INK, AMP);
+  });
+  path(sil, true); stroke(LINE);
+}

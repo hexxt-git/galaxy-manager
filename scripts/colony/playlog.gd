@@ -154,14 +154,13 @@ func _snapshot() -> void:
 	for d in get_tree().get_nodes_in_group("drops"):
 		drops[d.type] = drops.get(d.type, 0) + d.count
 	write("state", {
-		"o2": r.o2, "water": r.water, "food": r.food, "research": r.research, "shield": r.shield, "per_min": rates,
+		"o2": r.o2, "water": r.water, "food": r.food, "research": r.research, "per_min": rates,
 		"power": {"supply": colony.power.x, "demand": colony.power.y, "ratio": clampf(colony.power.x / colony.power.y, 0.0, 1.0),
 			"solar": panels.map(func(s: Station) -> float: return Colony.PANEL_POWER * (1.0 - s.state.dust)),
 			"reactors": colony.stations_of("reactor").size(),
 			"beds": beds.size(), "crew": colony.crew.size()},
 		"dust": panels.map(func(s: Station) -> float: return s.state.dust),
-		"food_per_min_beds": colony.food_rate(), "fatigue": colony.fatigue,
-		"flare_in": colony.flare_in if colony.flare_in < INF else -1.0, "shield_need": colony.shield_need(),
+		"potatoes_per_min_beds": colony.food_rate(),
 		"unlocked": colony.unlocked.keys(), "mults": {"bed": colony.mult("bed_x"), "panel": colony.mult("panel_x"), "bit": colony.mult("bit"), "lab": colony.mult("lab_x")},
 		"on_ground": drops, "crew": colony.crew.size(), "next_crew_food": colony.crew_cost(),
 		"next_upgrade_research": colony.upgrade_cost(), "upgrades": colony.levels.duplicate(),

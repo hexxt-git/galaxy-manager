@@ -1,25 +1,29 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene format=3 uid="uid://du3jlrlxcj8bs"]
 
-[ext_resource type="Script" path="res://scripts/player.gd" id="2_player"]
-[ext_resource type="Texture2D" path="res://assets/art/character/character.png" id="3_character"]
-[ext_resource type="Script" path="res://scripts/joystick.gd" id="4_joy"]
-[ext_resource type="Shader" path="res://assets/art/character/character_recolor.gdshader" id="5_recolor"]
-[ext_resource type="Script" path="res://scripts/main.gd" id="6_main"]
-[ext_resource type="Script" path="res://scripts/interaction/interaction_detector.gd" id="7_detector"]
-[ext_resource type="Script" path="res://scripts/map/station_map.gd" id="8_map"]
-[ext_resource type="Script" path="res://scripts/map/vision.gd" id="16_vision"]
-[ext_resource type="Script" path="res://scripts/bots/bots.gd" id="17_bots"]
-[ext_resource type="Script" path="res://scripts/ui/use_button.gd" id="9_use"]
-[ext_resource type="Texture2D" path="res://assets/art/ui/use_button.png" id="10_use_n"]
-[ext_resource type="Texture2D" path="res://assets/art/ui/use_button_pressed.png" id="11_use_p"]
-[ext_resource type="Texture2D" path="res://assets/art/ui/use_button_disabled.png" id="12_use_d"]
-[ext_resource type="Script" path="res://scripts/ui/task_panel.gd" id="13_panel"]
-[ext_resource type="Texture2D" path="res://assets/art/ui/panel.png" id="14_panel_tex"]
-[ext_resource type="Texture2D" path="res://assets/art/ui/close_button.png" id="15_close"]
+[ext_resource type="Script" uid="uid://b2x428lyrjhhi" path="res://scripts/player.gd" id="2_player"]
+[ext_resource type="Texture2D" uid="uid://b6pafx655yllj" path="res://assets/art/character/character.png" id="3_character"]
+[ext_resource type="Script" uid="uid://dlki7k1cfa4ak" path="res://scripts/joystick.gd" id="4_joy"]
+[ext_resource type="Shader" uid="uid://ctsmywedep5kk" path="res://assets/art/character/character_recolor.gdshader" id="5_recolor"]
+[ext_resource type="Script" uid="uid://bqh2nhe6grrbq" path="res://scripts/main.gd" id="6_main"]
+[ext_resource type="Script" uid="uid://boflgyq2illim" path="res://scripts/interaction/interaction_detector.gd" id="7_detector"]
+[ext_resource type="Script" uid="uid://c2tdf4k3nlsdu" path="res://scripts/map/station_map.gd" id="8_map"]
+[ext_resource type="Script" uid="uid://c8n23a5a25hpt" path="res://scripts/ui/use_button.gd" id="9_use"]
+[ext_resource type="Texture2D" uid="uid://s1h77xvorp1f" path="res://assets/art/ui/use_button.png" id="10_use_n"]
+[ext_resource type="Texture2D" uid="uid://dj0i85fd08kcg" path="res://assets/art/ui/use_button_pressed.png" id="11_use_p"]
+[ext_resource type="Texture2D" uid="uid://ch1wbjt31hnv6" path="res://assets/art/ui/use_button_disabled.png" id="12_use_d"]
+[ext_resource type="Script" uid="uid://dlaa4me5bynxk" path="res://scripts/ui/task_panel.gd" id="13_panel"]
+[ext_resource type="Texture2D" uid="uid://c7fvq2oxwyaeb" path="res://assets/art/ui/panel.png" id="14_panel_tex"]
+[ext_resource type="Texture2D" uid="uid://b1uujis74f3ek" path="res://assets/art/ui/close_button.png" id="15_close"]
+[ext_resource type="Script" uid="uid://c5gsliwk4lhtl" path="res://scripts/map/vision.gd" id="16_vision"]
+[ext_resource type="Script" uid="uid://3kw6ubkeuyd2" path="res://scripts/bots/bots.gd" id="17_bots"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_character"]
 resource_local_to_scene = true
 shader = ExtResource("5_recolor")
+shader_parameter/body_color = Color(0.773, 0.067, 0.067, 1)
+shader_parameter/shadow_color = Color(0.478, 0.031, 0.22, 1)
+shader_parameter/light = 1.0
+shader_parameter/contrast = 1.0
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_feet"]
 radius = 16.0
@@ -32,59 +36,59 @@ radius = 60.0
 font_size = 11
 font_color = Color(0.051, 0.051, 0.071, 1)
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" unique_id=1097392039]
 script = ExtResource("6_main")
 
-[node name="World" type="Node2D" parent="."]
+[node name="World" type="Node2D" parent="." unique_id=849298708]
 y_sort_enabled = true
 
-[node name="Map" type="Node2D" parent="World"]
+[node name="Map" type="Node2D" parent="World" unique_id=1355162433]
 y_sort_enabled = true
 script = ExtResource("8_map")
 
-[node name="Bots" type="Node2D" parent="World" node_paths=PackedStringArray("map")]
+[node name="Bots" type="Node2D" parent="World" unique_id=130186919 node_paths=PackedStringArray("map")]
 y_sort_enabled = true
 script = ExtResource("17_bots")
 map = NodePath("../Map")
 
-[node name="Player" type="CharacterBody2D" parent="World" node_paths=PackedStringArray("joystick")]
+[node name="Player" type="CharacterBody2D" parent="World" unique_id=1243267772 node_paths=PackedStringArray("joystick")]
 position = Vector2(1024, 660)
 motion_mode = 1
 script = ExtResource("2_player")
 joystick = NodePath("../../HUD/Joystick")
 
-[node name="Sprite" type="Sprite2D" parent="World/Player"]
+[node name="Sprite" type="Sprite2D" parent="World/Player" unique_id=1041343847]
 material = SubResource("ShaderMaterial_character")
 scale = Vector2(1.8, 1.8)
 texture = ExtResource("3_character")
 centered = false
 offset = Vector2(-34, -69)
 
-[node name="Feet" type="CollisionShape2D" parent="World/Player"]
+[node name="Feet" type="CollisionShape2D" parent="World/Player" unique_id=158098800]
 position = Vector2(0, -12)
 rotation = 1.5707964
 shape = SubResource("CapsuleShape2D_feet")
 
-[node name="InteractionDetector" type="Area2D" parent="World/Player"]
+[node name="InteractionDetector" type="Area2D" parent="World/Player" unique_id=831583257]
 collision_layer = 0
 collision_mask = 4
 script = ExtResource("7_detector")
 
-[node name="Reach" type="CollisionShape2D" parent="World/Player/InteractionDetector"]
+[node name="Reach" type="CollisionShape2D" parent="World/Player/InteractionDetector" unique_id=834592334]
 position = Vector2(0, -12)
 shape = SubResource("CircleShape2D_reach")
 
-[node name="Camera" type="Camera2D" parent="World/Player"]
+[node name="Camera" type="Camera2D" parent="World/Player" unique_id=635594496]
 position = Vector2(0, -75)
 
-[node name="Vision" type="Node2D" parent="." node_paths=PackedStringArray("viewer", "map")]
+[node name="Vision" type="Node2D" parent="." unique_id=243233828 node_paths=PackedStringArray("viewer", "map")]
 script = ExtResource("16_vision")
 viewer = NodePath("../World/Player")
 map = NodePath("../World/Map")
 
-[node name="HUD" type="CanvasLayer" parent="."]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=176499820]
 
-[node name="Joystick" type="Control" parent="HUD"]
+[node name="Joystick" type="Control" parent="HUD" unique_id=1134130201]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -93,7 +97,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("4_joy")
 
-[node name="UseButton" type="TextureButton" parent="HUD" node_paths=PackedStringArray("detector") groups=["blocks_joystick"]]
+[node name="UseButton" type="TextureButton" parent="HUD" unique_id=1878891576 node_paths=PackedStringArray("detector") groups=["blocks_joystick"]]
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
@@ -110,7 +114,7 @@ texture_disabled = ExtResource("12_use_d")
 script = ExtResource("9_use")
 detector = NodePath("../../World/Player/InteractionDetector")
 
-[node name="TaskPanel" type="Control" parent="HUD" groups=["blocks_joystick"]]
+[node name="TaskPanel" type="Control" parent="HUD" unique_id=928431978 groups=["blocks_joystick"]]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -119,7 +123,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("13_panel")
 
-[node name="Dim" type="ColorRect" parent="HUD/TaskPanel"]
+[node name="Dim" type="ColorRect" parent="HUD/TaskPanel" unique_id=1047599791]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -128,7 +132,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.45)
 
-[node name="Window" type="NinePatchRect" parent="HUD/TaskPanel"]
+[node name="Window" type="NinePatchRect" parent="HUD/TaskPanel" unique_id=1125860378]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -137,17 +141,17 @@ anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -300.0
 offset_top = -420.0
-offset_right = 0.0
-offset_bottom = 0.0
-mouse_filter = 0
+grow_horizontal = 2
+grow_vertical = 2
 scale = Vector2(2, 2)
+mouse_filter = 0
 texture = ExtResource("14_panel_tex")
 patch_margin_left = 20
 patch_margin_top = 20
 patch_margin_right = 20
 patch_margin_bottom = 20
 
-[node name="Title" type="Label" parent="HUD/TaskPanel/Window"]
+[node name="Title" type="Label" parent="HUD/TaskPanel/Window" unique_id=1677635312]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 10.0
@@ -158,7 +162,7 @@ text = "Workstation"
 label_settings = SubResource("LabelSettings_title")
 vertical_alignment = 1
 
-[node name="Close" type="TextureButton" parent="HUD/TaskPanel/Window"]
+[node name="Close" type="TextureButton" parent="HUD/TaskPanel/Window" unique_id=621056942]
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 280.0

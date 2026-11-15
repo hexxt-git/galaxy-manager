@@ -6,6 +6,9 @@ extends Control
 const RADIUS := 110.0
 const KNOB_RADIUS := 48.0
 const DEAD_ZONE := 0.15
+const ART_SCALE := 3.0
+const BASE := preload("res://assets/art/ui/joy_base.png")
+const KNOB := preload("res://assets/art/ui/joy_knob.png")
 
 var vector := Vector2.ZERO
 
@@ -15,6 +18,7 @@ var _knob := Vector2.ZERO
 
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
@@ -55,7 +59,8 @@ func _draw() -> void:
 	if _touch == -1:
 		return
 	# Touch events arrive in viewport coordinates; this control fills the viewport, so they map 1:1.
-	draw_circle(_origin, RADIUS, Color(1, 1, 1, 0.18))
-	draw_arc(_origin, RADIUS, 0, TAU, 64, Color(0.05, 0.05, 0.07, 0.6), 6.0)
-	draw_circle(_knob, KNOB_RADIUS, Color(1, 1, 1, 0.55))
-	draw_arc(_knob, KNOB_RADIUS, 0, TAU, 48, Color(0.05, 0.05, 0.07, 0.8), 6.0)
+	draw_set_transform(_origin, 0.0, Vector2(ART_SCALE, ART_SCALE))
+	draw_texture(BASE, -Vector2(32, 32))
+	draw_set_transform(_knob, 0.0, Vector2(ART_SCALE, ART_SCALE))
+	draw_texture(KNOB, -Vector2(14, 13))
+	draw_set_transform(Vector2.ZERO)

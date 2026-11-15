@@ -6,8 +6,8 @@ const BOT := preload("res://scenes/bot.tscn")
 const HELPER := preload("res://scripts/colony/helper.gd")
 const NavGrid := preload("res://scripts/bots/nav_grid.gd")
 const PLAYLOG := preload("res://scripts/colony/playlog.gd")
-const CRATER_DARK := Color(0.16, 0.18, 0.28)
-const LIGHT_FADE := 2.0
+const CRATER_DARK := preload("res://assets/shaders/crater_dark.gdshader")
+const OUTSIDE_DARK := preload("res://assets/shaders/outside_dark.gdshader")
 const POPUP_RISE := 70.0
 const POPUP_TIME := 1.2
 
@@ -23,8 +23,6 @@ const POPUP_TIME := 1.2
 @onready var picker: Control = $HUD/Picker
 @onready var minimap: Control = $HUD/Minimap
 @onready var guide: Node2D = $World/Guide
-@onready var shade: CanvasModulate = $Shade
-@onready var helmet: PointLight2D = $World/Player/Helmet
 @onready var use_button: TextureButton = $HUD/UseButton
 
 var nav: NavGrid
@@ -38,6 +36,48 @@ var _open_title := ""
 var playlog: Node
 
 
+var _dark_mat := ShaderMaterial.new()
+
+
+func _add_crater_dark() -> void:
+	var t := ColonyMap.TILE
+	var past := 40.0 * t  # reaches as far as the outside darkness, so the two never meet in a seam
+	var rect := Rect2(-past, 26.4 * t, map.cols() * t + past * 2.0, (map.rows() - 26.4) * t + past)
+	_dark_mat.shader = CRATER_DARK
+	_dark_mat.set_shader_parameter("rect_pos", rect.position)
+	_dark_mat.set_shader_parameter("rect_size", rect.size)
+	var dark := ColorRect.new()
+	dark.material = _dark_mat
+	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dark.position = rect.position
+	dark.size = rect.size
+	dark.z_index = 50
+	dark.z_as_relative = false
+	$World.add_child(dark)
+
+
+# Past the border rocks it fades to night, so the map never shows an edge.
+func _add_outside_dark() -> void:
+	var t := ColonyMap.TILE
+	var inner := Rect2(t, t, (map.cols() - 2) * t, (map.rows() - 2) * t + 50.0)
+	var mat := ShaderMaterial.new()
+	mat.shader = OUTSIDE_DARK
+	var rect := inner.grow(40.0 * t)
+	mat.set_shader_parameter("rect_pos", rect.position)
+	mat.set_shader_parameter("rect_size", rect.size)
+	mat.set_shader_parameter("inner_pos", inner.position)
+	mat.set_shader_parameter("inner_size", inner.size)
+	mat.set_shader_parameter("dark", RenderingServer.get_default_clear_color())
+	var dark := ColorRect.new()
+	dark.material = mat
+	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dark.position = rect.position
+	dark.size = rect.size
+	dark.z_index = 50
+	dark.z_as_relative = false
+	$World.add_child(dark)
+
+
 func _ready() -> void:
 	playlog = PLAYLOG.new()
 	playlog.colony = colony
@@ -45,6 +85,8 @@ func _ready() -> void:
 	add_child(playlog)
 	items.add_to_group("item_layer")
 	map.build(items)
+	_add_crater_dark()
+	_add_outside_dark()
 	colony.setup(map, items)
 	player.global_position = map.spawn
 	player.set_meta("base_speed", Colony.WALK)
@@ -56,7 +98,6 @@ func _ready() -> void:
 	colony.station_added.connect(_on_station_added)
 	colony.crew_changed.connect(hud.rebuild_crew)
 	colony.won.connect(_on_won)
-	colony.flare.connect(_on_flare)
 	hud.colony = colony
 	hud.hands = hands
 	hud.detector = detector
@@ -112,16 +153,11 @@ func _process(delta: float) -> void:
 	hands.caption = _caption()
 	guide.blocked = why != ""
 	use_button.disabled = target == null or why != ""
-	var shade_to := Color.WHITE
-	var in_crater := map.char_at(player.global_position) == ":"
-	if in_crater:
-		shade_to = CRATER_DARK
-	shade.color = shade.color.lerp(shade_to, minf(1.0, LIGHT_FADE * delta))
+	_dark_mat.set_shader_parameter("light_pos", player.global_position + Vector2(0, -40))
 	var area := map.char_at(player.global_position)
 	if area != _area:
 		_area = area
 		playlog.write("area", {"where": {".": "inside", ",": "surface", ":": "crater"}.get(area, area), "at": player.global_position.round()})
-	helmet.enabled = in_crater
 
 
 func _caption() -> String:
@@ -244,6 +280,9 @@ func _on_station_used(s: Station, by: Node) -> void:
 		colony.finish(s, by)
 		return
 	var game := Minigame.new()
+	var skin_path := "res://scripts/colony/minigames/%s.gd" % s.kind
+	if ResourceLoader.exists(skin_path):
+		game.skin = load(skin_path).new()
 	game.mode = mode
 	game.heat = s.kind == "drill"
 	if s.kind == "lab":
@@ -299,19 +338,6 @@ func _clear_content() -> void:
 		_on_offer.call_deferred(o[0], o[1])
 
 
-func _on_flare(hit: bool) -> void:
-	playlog.write("flare", {"hit": hit, "shield": colony.res.shield, "need": colony.shield_need()})
-	var flash := ColorRect.new()
-	flash.color = Color(1, 0.55, 0.15, 0.55 if hit else 0.25)
-	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	$HUD.add_child(flash)
-	$HUD.move_child(flash, 0)
-	var tw := flash.create_tween()
-	tw.tween_property(flash, "color:a", 0.0, 1.5)
-	tw.tween_callback(flash.queue_free)
-
-
 func _on_won() -> void:
 	var cover := ColorRect.new()
 	cover.color = Color(0.03, 0.04, 0.08, 0.92)
@@ -330,6 +356,10 @@ func _on_won() -> void:
 	var more := Button.new()
 	more.text = "KEEP GOING"
 	more.add_theme_font_size_override("font_size", 30)
+	for st in [["normal", "card"], ["focus", "card"], ["hover", "card_hover"], ["pressed", "card_hover"]]:
+		more.add_theme_stylebox_override(st[0], hud.nine(st[1], 16))
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		more.add_theme_color_override(c, Color("0d0d12"))
 	more.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	more.offset_left = -160
 	more.offset_right = 160

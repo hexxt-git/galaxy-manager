@@ -34,7 +34,7 @@ func _run() -> void:
 	for s in map.stations:
 		kinds[s.kind] = kinds.get(s.kind, 0) + 1
 	print(kinds)
-	_check(kinds.get("solar") == 2 and kinds.get("bed") == 2 and kinds.get("drill") == 1 and kinds.get("note") == 9 and kinds.get("outcrop") == 2 and kinds.get("pit") == 1 and kinds.get("shield") == 1 and kinds.get("oven") == 1 and kinds.get("comms") == 1 and kinds.get("electrolyzer") == 1 and kinds.get("decor", 0) > 3, "small starting base built from the layout")
+	_check(kinds.get("solar") == 2 and kinds.get("bed") == 2 and kinds.get("drill") == 1 and kinds.get("note") == 9 and kinds.get("outcrop") == 2 and kinds.get("kitchen") == 1 and kinds.get("oven") == 1 and kinds.get("comms") == 1 and kinds.get("electrolyzer") == 1 and kinds.get("decor", 0) > 3, "small starting base built from the layout")
 	_check(map.free_slots("G") == 4 and map.free_slots("S") == 4 and map.free_slots("N") == 1, "empty slots left to build into")
 	_check(map.char_at(player.global_position) == ".", "player spawns on indoor floor")
 	_check(main.nav != null and main.nav.targets.size() > 1000, "nav grid built")
@@ -92,7 +92,7 @@ func _run() -> void:
 	hands.add("ice", 1)
 	_check(colony.destinations("ice") == colony.stations_of("melter") and main._caption() == "Ice -> Ice melter", "carried ice says where it goes")
 	hands.take()
-	_check(colony.destinations("bag").is_empty(), "locked stations aren't destinations")
+	_check(colony.destinations("sample") == colony.stations_of("lab"), "locked stations aren't destinations")
 
 	# research offers upgrade cards; picking one builds into a slot
 	var picker: Control = main.picker
@@ -120,20 +120,21 @@ func _run() -> void:
 	colony.res.o2 = 20.0
 	colony.res.water = 20.0
 
-	# tending a bed turns water into food on the spot; doubling upgrades double it
+	# tending a bed gives potatoes to carry; only the kitchen turns them into food
 	var bed: Station = colony.stations_of("bed")[0]
+	bed.state.grown = 0.0
 	colony.res.water = 10.0
 	var food: float = colony.res.food
 	colony.finish(bed, player)
-	_check(is_equal_approx(colony.res.food, food + Colony.TEND_FOOD) and is_equal_approx(colony.res.water, 9.0), "tending: 1 water -> 1 food")
-	colony.levels.bed_x = 1
-	food = colony.res.food
-	colony.finish(bed, player)
-	_check(is_equal_approx(colony.res.food, food + Colony.TEND_FOOD), "tending stays flat: upgrades only multiply the beds")
-	colony.levels.bed_x = 0
+	_check(hands.holds("potato") and hands.count == floori(Colony.TEND_FOOD) and is_equal_approx(colony.res.water, 9.0) and is_equal_approx(colony.res.food, food), "tending: 1 water -> potatoes in hand, no food yet")
+	var kitchen: Station = colony.stations_of("kitchen")[0]
+	_check(colony.destinations("potato") == [kitchen] and colony.blocked_reason(kitchen, player) == "", "potatoes go to the kitchen")
+	colony.finish(kitchen, player)
+	_check(is_equal_approx(colony.res.food, food + floori(Colony.TEND_FOOD)) and hands.is_empty(), "the kitchen stocks the potatoes as food")
+	bed.state.grown = 0.0
 	food = colony.res.food
 	colony.tick(60.0)
-	_check(colony.res.food > food - Colony.EAT, "beds grow food on their own (%.2f/min)" % colony.food_rate())
+	_check(bed.state.grown > 0.0 and colony.res.food <= food, "beds grow potatoes on their own, but they wait in the bed (%.2f)" % bed.state.grown)
 
 	# stocking food offers crewmate cards; a farmer tends beds on their own
 	colony.res.food = colony.crew_cost() + 1.0
@@ -171,22 +172,9 @@ func _run() -> void:
 	var taken: Array = colony.crew.map(func(c): return str(c.get("crew_name")))
 	_check(colony._crew_cards().all(func(c): return c.name not in taken), "crew cards never repeat a crewmate's name")
 
-	# growing the crew unlocks the reactor and then flares + shielding
+	# growing the crew unlocks the reactor
 	main._on_chosen({"name": "Mae", "colour": "green", "role": "ice", "perk": "hardy", "title": "Mae", "text": ""})
 	_check(colony.unlocked.has("reactor") and colony._can_take("reactor"), "3 crew unlocks the reactor card")
-	for n in ["Neil", "Sally"]:
-		main._on_chosen({"name": n, "colour": "yellow", "role": "rocks", "perk": "quick", "title": n, "text": ""})
-	_check(colony.unlocked.has("shield") and colony.flare_in < INF, "5 crew unlocks shielding and starts flares")
-	colony.res.shield = 0.0
-	colony.flare_in = 0.01
-	colony.tick(0.05)
-	_check(colony.fatigue > 0.0 and colony.work_speed() < 1.0, "a flare on an unshielded base slows the crew")
-	colony.fatigue = 0.0
-	colony.res.shield = colony.shield_need()
-	colony.flare_in = 0.01
-	colony.tick(0.05)
-	_check(colony.fatigue == 0.0, "enough regolith blocks the flare")
-
 
 	print("FAILURES: ", failures)
 	quit(1 if failures else 0)

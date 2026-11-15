@@ -1,11 +1,12 @@
 class_name Hands
 extends Node2D
 
-## One carry slot holding any number of a single item type, shown above the carrier's head.
+## One carry slot holding any number of a single item type, held in front of the carrier's body.
 
 signal changed
 
-const HOLD_Y := -165.0
+const HOLD_Y := -44.0  # centre of the held item, against the belly
+const CAPTION_Y := -150.0
 const TOSS_SPEED := 220.0
 const TOSS_UP := 200.0
 
@@ -78,9 +79,9 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	if count > 0:
-		Items.draw_icon(self, Vector2(0, HOLD_Y + sin(_t * 6.0) * 2.0), type, count)
+		Items.draw_icon(self, Vector2(0, HOLD_Y), type, count)
 		if caption != "":
-			var font := ThemeDB.fallback_font
-			var at := Vector2(-150, HOLD_Y - 30)
-			draw_string_outline(font, at, caption, HORIZONTAL_ALIGNMENT_CENTER, 300, 20, 6, Items.INK)
-			draw_string(font, at, caption, HORIZONTAL_ALIGNMENT_CENTER, 300, 20, Color("f2c230"))
+			var font := ColonyMap.FONT
+			var at := Vector2(-150, CAPTION_Y)
+			draw_string_outline(font, at, caption, HORIZONTAL_ALIGNMENT_CENTER, 300, 24, 8, Items.INK)
+			draw_string(font, at, caption, HORIZONTAL_ALIGNMENT_CENTER, 300, 24, Color("f2c230"))

@@ -4,6 +4,7 @@ extends Node2D
 ## A stack of one item type lying on the ground. Tossed drops arc and bounce under lunar gravity,
 ## then hover, bob and spin. Resting drops of the same type merge into one stack.
 
+const SHADOW := preload("res://assets/art/character/shadow.png")
 const GRAVITY := 380.0
 const BOUNCE := 0.5
 const MIN_BOUNCE := 60.0
@@ -109,8 +110,7 @@ func _merge() -> void:
 func _draw() -> void:
 	var lift := h + (HOVER + sin(_t * 3.0) * 3.0 if resting else 6.0)
 	var shadow := clampf(1.0 - h / 160.0, 0.4, 1.0)
-	draw_set_transform(Vector2(0, -2), 0.0, Vector2(1.0, 0.35))
-	draw_circle(Vector2.ZERO, 18.0 * shadow, Color(0, 0, 0, 0.3))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(ColonyMap.PX, ColonyMap.PX) * shadow)
+	draw_texture(SHADOW, -SHADOW.get_size() * 0.5)
 	draw_set_transform(Vector2.ZERO)
-	var squash := cos(_t * 2.0) if resting else 1.0
-	Items.draw_icon(self, Vector2(0, -lift - 17), type, count, 34.0, squash)
+	Items.draw_icon(self, Vector2(0, -lift - 17), type, count)

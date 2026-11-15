@@ -32,17 +32,6 @@ height = 84.0
 [sub_resource type="CircleShape2D" id="CircleShape2D_reach"]
 radius = 60.0
 
-[sub_resource type="Gradient" id="Gradient_helmet"]
-colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_helmet"]
-gradient = SubResource("Gradient_helmet")
-width = 256
-height = 256
-fill = 1
-fill_from = Vector2(0.5, 0.5)
-fill_to = Vector2(0.5, 0)
-
 [sub_resource type="LabelSettings" id="LabelSettings_title"]
 font_size = 11
 font_color = Color(0.051, 0.051, 0.071, 1)
@@ -52,8 +41,6 @@ script = ExtResource("1_main")
 
 [node name="Colony" type="Node" parent="."]
 script = ExtResource("2_colony")
-
-[node name="Shade" type="CanvasModulate" parent="."]
 
 [node name="World" type="Node2D" parent="."]
 y_sort_enabled = true
@@ -95,13 +82,6 @@ shape = SubResource("CircleShape2D_reach")
 
 [node name="Hands" type="Node2D" parent="World/Player"]
 script = ExtResource("8_hands")
-
-[node name="Helmet" type="PointLight2D" parent="World/Player"]
-position = Vector2(0, -40)
-enabled = false
-energy = 1.4
-texture = SubResource("GradientTexture2D_helmet")
-texture_scale = 3.0
 
 [node name="Camera" type="Camera2D" parent="World/Player"]
 position = Vector2(0, -75)

@@ -4,6 +4,7 @@ extends Control
 
 const MARGIN := 24.0
 const INK := Color("0d0d12")
+const HUD := preload("res://scripts/colony/hud.gd")
 
 var map: ColonyMap
 var colony: Colony
@@ -40,24 +41,37 @@ func _draw() -> void:
 	var k := minf((size.x - MARGIN * 2) / grid.x, (size.y - MARGIN * 2 - 120) / grid.y)
 	var origin := (size - grid * k) * 0.5 + Vector2(0, 30)
 	var to_screen := func(world: Vector2) -> Vector2: return origin + world / ColonyMap.TILE * k
+	if map.ground_texture:
+		draw_texture_rect(map.ground_texture, Rect2(origin, grid * k), false)
+	else:
+		for y in map.rows():
+			for x in map.cols():
+				draw_rect(Rect2(origin + Vector2(x, y) * k, Vector2(k, k) + Vector2(0.5, 0.5)), ColonyMap.FLOORS[map.floor_cells[y * map.cols() + x]])
+	var wall := Color("bcd0cd")
+	var t := maxf(2.0, k * 0.34)
 	for y in map.rows():
 		for x in map.cols():
-			var f: String = map.floor_cells[y * map.cols() + x]
-			draw_rect(Rect2(origin + Vector2(x, y) * k, Vector2(k, k) + Vector2(0.5, 0.5)), ColonyMap.FLOORS[f])
+			if not map._is_wall(x, y):
+				continue
+			var c: Vector2 = origin + (Vector2(x, y) + Vector2(0.5, 0.5)) * k
+			draw_rect(Rect2(c - Vector2(t, t) * 0.5, Vector2(t, t)), wall)
+			for d in [Vector2i.RIGHT, Vector2i.DOWN]:
+				if map._is_wall(x + d.x, y + d.y):
+					draw_rect(Rect2(c - Vector2(t, t) * 0.5, Vector2(t, t) + Vector2(d) * k), wall)
 	for s in map.stations:
-		if not is_instance_valid(s) or s.kind == "note":
+		if not is_instance_valid(s) or s.kind == "note" or s.art == null:
 			continue
-		var tl: Vector2 = to_screen.call(s.global_position - Vector2(s.size.x * 0.5, s.size.y))
-		draw_rect(Rect2(tl, s.size / ColonyMap.TILE * k), s.colour)
-	var font := ThemeDB.fallback_font
+		var sz: Vector2 = s.art.get_size() * ColonyMap.PX / ColonyMap.TILE * k
+		var at: Vector2 = to_screen.call(s.global_position) - s.art_origin * ColonyMap.PX / ColonyMap.TILE * k
+		draw_texture_rect(s.art, Rect2(at, sz), false)
+	var font := ColonyMap.FONT
 	for c in colony.crew:
 		if not is_instance_valid(c):
 			continue
 		var p: Vector2 = to_screen.call(c.global_position)
-		var col: Color = c.COLOURS[c.colour][0]
-		var r := 9.0 if c == player else 7.0
-		draw_circle(p, r + 3, INK)
-		draw_circle(p, r, col)
+		var head := HUD.portrait(c.colour, true, 1)
+		var hs := head.get_size() * (0.6 if c == player else 0.45)
+		draw_texture_rect(head, Rect2(p - Vector2(hs.x * 0.5, hs.y), hs), false)
 		if c == player:
 			draw_string(font, p + Vector2(-40, -16), "YOU", HORIZONTAL_ALIGNMENT_CENTER, 80, 18, Color.WHITE)
 	draw_string(font, Vector2(0, 50), "MAP  (M or tap to close)", HORIZONTAL_ALIGNMENT_CENTER, size.x, 26, Color.WHITE)

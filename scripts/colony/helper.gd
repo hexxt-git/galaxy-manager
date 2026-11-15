@@ -80,8 +80,8 @@ func _deliver() -> String:
 			return "baking rocks into O2"
 		if _use_nearest("lab"):
 			return "delivering rocks"
-	if hands.holds("bag") and _use_nearest("shield"):
-		return "stacking shielding"
+	if hands.holds("potato") and _use_nearest("kitchen"):
+		return "stocking potatoes"
 	return ""
 
 
@@ -104,6 +104,8 @@ func _try(task: String) -> String:
 			if _use_nearest("electrolyzer"):
 				return "splitting water into air"
 		"harvest":
+			if _pick_up("potato"):
+				return "picking up potatoes"
 			if _use_nearest("bed"):
 				return "tending potatoes"
 		"solar":
@@ -114,13 +116,6 @@ func _try(task: String) -> String:
 				return "fetching a rock"
 			if _use_nearest("outcrop"):
 				return "digging rocks"
-		"shield":
-			if colony.wants("shield") <= 0.0:
-				return ""
-			if _pick_up("bag"):
-				return "fetching bags"
-			if _use_nearest("pit"):
-				return "filling bags"
 	return ""
 
 
@@ -167,7 +162,7 @@ func _nearest(nodes: Array) -> Node2D:
 
 
 func _draw() -> void:
-	var font := ThemeDB.fallback_font
+	var font := ColonyMap.FONT
 	var text := "%s · %s" % [crew_name, Colony.ROLES[role][0]]
-	draw_string_outline(font, Vector2(-100, -192), text, HORIZONTAL_ALIGNMENT_CENTER, 200, 18, 5, Color("0d0d12"))
-	draw_string(font, Vector2(-100, -192), text, HORIZONTAL_ALIGNMENT_CENTER, 200, 18, Color.WHITE)
+	draw_string_outline(font, Vector2(-100, -192), text, HORIZONTAL_ALIGNMENT_CENTER, 200, 22, 8, Color("0d0d12"))
+	draw_string(font, Vector2(-100, -192), text, HORIZONTAL_ALIGNMENT_CENTER, 200, 22, Color.WHITE)
